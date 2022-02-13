@@ -36,20 +36,20 @@ def getOcrCard(api, img):
 def test_getOcrCard(api, imgName, scaleFactor, binThresh):
     images = ['img/' + imgName]
     for img in images:
-        #api.SetImageFile(img)
         pilImg = Image.open(img)
+
+        #avgGray = np.average(cv2.cvtColor(np.array(pilImg), cv2.COLOR_RGB2GRAY))
+        #print(avgGray)
+
         pilImg = preprocessImage(pilImg, scaleFactor, binThresh)
         result = getOcrCard(api, pilImg)
         print(result)
 
 
 def getOcrNumber(api, img):
-    #api.SetVariable("tessedit_char_whitelist", "0123456789.")
-    #api.SetVariable("classify_bln_numeric_mode", "1")
     api.SetImage(img)
     number = None
-    print(api.GetUTF8Text())
-
+    #print(api.GetUTF8Text())
     for result in api.GetUTF8Text().split():
         try:
             number = float(result)
@@ -63,7 +63,6 @@ def getOcrNumber(api, img):
 def test_getOcrNumber(api, imgName, scaleFactor, binThresh):
     images = ['img/' + imgName]
     for img in images:
-        #api.SetImageFile(img)
         pilImg = Image.open(img)
         pilImg = preprocessImage(pilImg, scaleFactor, binThresh)
         result = getOcrNumber(api, pilImg)
@@ -75,7 +74,6 @@ def preprocessImage(img, scaleFactor, binThresh):
     def scaleImage(img, scaleFactor):
         return img.resize((img.size[0] * scaleFactor, img.size[1] * scaleFactor))
 
-    # pot or bet size: 180
     def binarize(img, threshold):
         img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2GRAY)
         _, binarized = cv2.threshold(img, threshold, 255, cv2.THRESH_BINARY_INV)
@@ -96,10 +94,10 @@ def test_preprocessImage(imgName, scaleFactor, binThresh):
 if __name__ == '__main__':
     api = PyTessBaseAPI(path='tessdata', psm=PSM.SINGLE_LINE, oem=OEM.LSTM_ONLY)
 
-    testImgName = 'string1.png'
+    testImgName = 'felt.png'
     scaleFactor = 4
     binThresh = 180
     test_preprocessImage(testImgName, scaleFactor, binThresh)
-    test_getOcrString(api, testImgName, scaleFactor, binThresh)
+    test_getOcrCard(api, testImgName, scaleFactor, binThresh)
 
     api.End()

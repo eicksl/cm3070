@@ -1,0 +1,47 @@
+{
+    "table1": {
+        "pot": [[
+            217,
+            189,
+            324,
+            265
+        ]],
+        "bets": [null, null, null, null, null, null],
+        "stacks": [null, null, null, null, null, null],
+        "holeCards": [null, null],
+        "boardCards": [null, null, null, null, null],
+        "heroActive": [null],
+        "buttons": [null, null, null, null, null, null],
+        "cardBacks": [null, null, null, null, null, null]
+    },
+    "table2": {
+        "pot": [null],
+        "bets": [null, null, null, null, null, null],
+        "stacks": [null, null, null, null, null, null],
+        "holeCards": [null, null],
+        "boardCards": [null, null, null, null, null],
+        "heroActive": [null],
+        "buttons": [null, null, null, null, null, null],
+        "cardBacks": [null, null, null, null, null, null]
+    },
+    "table3": {
+        "pot": [null],
+        "bets": [null, null, null, null, null, null],
+        "stacks": [null, null, null, null, null, null],
+        "holeCards": [null, null],
+        "boardCards": [null, null, null, null, null],
+        "heroActive": [null],
+        "buttons": [null, null, null, null, null, null],
+        "cardBacks": [null, null, null, null, null, null]
+    },
+    "table4": {
+        "pot": [null],
+        "bets": [null, null, null, null, null, null],
+        "stacks": [null, null, null, null, null, null],
+        "holeCards": [null, null],
+        "boardCards": [null, null, null, null, null],
+        "heroActive": [null],
+        "buttons": [null, null, null, null, null, null],
+        "cardBacks": [null, null, null, null, null, null]
+    }
+}
