@@ -1,47 +1,411 @@
 {
     "table1": {
-        "pot": [[
-            217,
-            189,
-            324,
-            265
-        ]],
-        "bets": [null, null, null, null, null, null],
-        "stacks": [null, null, null, null, null, null],
-        "holeCards": [null, null],
-        "boardCards": [null, null, null, null, null],
-        "heroActive": [null],
-        "buttons": [null, null, null, null, null, null],
-        "cardBacks": [null, null, null, null, null, null]
+        "bets": [
+            [
+                529,
+                524,
+                633,
+                557
+            ],
+            [
+                292,
+                472,
+                384,
+                510
+            ],
+            [
+                310,
+                307,
+                408,
+                341
+            ],
+            [
+                626,
+                235,
+                709,
+                266
+            ],
+            [
+                725,
+                278,
+                829,
+                315
+            ],
+            [
+                767,
+                468,
+                857,
+                511
+            ]
+        ],
+        "boardCards": [
+            [
+                388,
+                334,
+                458,
+                381
+            ],
+            [
+                463,
+                335,
+                533,
+                383
+            ],
+            [
+                542,
+                338,
+                608,
+                383
+            ],
+            [
+                615,
+                338,
+                686,
+                386
+            ],
+            [
+                695,
+                337,
+                764,
+                384
+            ]
+        ],
+        "buttons": [
+            [
+                443,
+                549,
+                488,
+                588
+            ],
+            [
+                219,
+                425,
+                254,
+                458
+            ],
+            [
+                234,
+                322,
+                278,
+                361
+            ],
+            [
+                607,
+                253,
+                648,
+                292
+            ],
+            [
+                887,
+                320,
+                929,
+                357
+            ],
+            [
+                830,
+                508,
+                868,
+                538
+            ]
+        ],
+        "cardBacks": [
+            null,
+            [
+                68,
+                442,
+                131,
+                472
+            ],
+            [
+                110,
+                200,
+                165,
+                230
+            ],
+            [
+                508,
+                122,
+                566,
+                150
+            ],
+            [
+                980,
+                199,
+                1044,
+                229
+            ],
+            [
+                1016,
+                445,
+                1081,
+                476
+            ]
+        ],
+        "holeCards": [
+            [
+                505,
+                574,
+                574,
+                622
+            ],
+            [
+                575,
+                574,
+                646,
+                619
+            ]
+        ],
+        "playerActive": [
+            [
+                496,
+                691,
+                525,
+                713
+            ],
+            [
+                56,
+                544,
+                83,
+                558
+            ],
+            [
+                88,
+                296,
+                125,
+                315
+            ],
+            [
+                485,
+                215,
+                527,
+                239
+            ],
+            [
+                901,
+                296,
+                945,
+                312
+            ],
+            [
+                926,
+                545,
+                968,
+                566
+            ]
+        ],
+        "pot": [
+            [
+                558,
+                304,
+                647,
+                335
+            ]
+        ],
+        "stacks": [
+            [
+                563,
+                655,
+                648,
+                685
+            ],
+            [
+                64,
+                511,
+                160,
+                544
+            ],
+            [
+                99,
+                265,
+                199,
+                297
+            ],
+            [
+                497,
+                187,
+                598,
+                219
+            ],
+            [
+                964,
+                265,
+                1046,
+                298
+            ],
+            [
+                1001,
+                511,
+                1084,
+                543
+            ]
+        ]
     },
     "table2": {
-        "pot": [null],
-        "bets": [null, null, null, null, null, null],
-        "stacks": [null, null, null, null, null, null],
-        "holeCards": [null, null],
-        "boardCards": [null, null, null, null, null],
-        "heroActive": [null],
-        "buttons": [null, null, null, null, null, null],
-        "cardBacks": [null, null, null, null, null, null]
+        "bets": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ],
+        "boardCards": [
+            null,
+            null,
+            null,
+            null,
+            null
+        ],
+        "buttons": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ],
+        "cardBacks": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ],
+        "holeCards": [
+            null,
+            null
+        ],
+        "playerActive": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ],
+        "pot": [
+            null
+        ],
+        "stacks": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ]
     },
     "table3": {
-        "pot": [null],
-        "bets": [null, null, null, null, null, null],
-        "stacks": [null, null, null, null, null, null],
-        "holeCards": [null, null],
-        "boardCards": [null, null, null, null, null],
-        "heroActive": [null],
-        "buttons": [null, null, null, null, null, null],
-        "cardBacks": [null, null, null, null, null, null]
+        "bets": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ],
+        "boardCards": [
+            null,
+            null,
+            null,
+            null,
+            null
+        ],
+        "buttons": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ],
+        "cardBacks": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ],
+        "holeCards": [
+            null,
+            null
+        ],
+        "playerActive": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ],
+        "pot": [
+            null
+        ],
+        "stacks": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ]
     },
     "table4": {
-        "pot": [null],
-        "bets": [null, null, null, null, null, null],
-        "stacks": [null, null, null, null, null, null],
-        "holeCards": [null, null],
-        "boardCards": [null, null, null, null, null],
-        "heroActive": [null],
-        "buttons": [null, null, null, null, null, null],
-        "cardBacks": [null, null, null, null, null, null]
+        "bets": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ],
+        "boardCards": [
+            null,
+            null,
+            null,
+            null,
+            null
+        ],
+        "buttons": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ],
+        "cardBacks": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ],
+        "holeCards": [
+            null,
+            null
+        ],
+        "playerActive": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ],
+        "pot": [
+            null
+        ],
+        "stacks": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ]
     }
 }
