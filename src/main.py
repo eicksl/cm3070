@@ -24,7 +24,7 @@ def run():
             print()
             exit(0)
         elif num == 1:
-            StateManager().test_run()
+            StateManager(1).test_run()
         elif num == 2:
             TableSetup().run()
         else:

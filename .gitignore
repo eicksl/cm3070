@@ -18,7 +18,9 @@ sheet_not_found.png
 /poker/tests/log
 *.prof
 /img/test/*
+/img/states/*
 /img/debug/*
+/test/cookies/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

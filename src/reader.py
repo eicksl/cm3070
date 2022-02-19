@@ -1,7 +1,7 @@
 import os, json, cv2
 import numpy as np
 from util import (
-    getCard, getOcrBet, containsTemplate,
+    getCard, getOcrBet, containsTemplate, getCardSuit,
     villainHasCards, POS_RANKS_DICT, POS_RANKS_DICT_PRE
 )
 from tesserocr import PyTessBaseAPI, PSM, OEM
@@ -53,6 +53,12 @@ class Reader:
         return strCard1 + strCard2
 
 
+    def isPreflop(self):
+        bbox = self.areas[self.table]['boardCards'][0]
+        npImg = np.array(self.getPilImage(bbox))
+        return getCardSuit(npImg) is None
+
+
     def getPositions(self):
 
         def getBtnIndex():
@@ -80,7 +86,7 @@ class Reader:
         return pos_to_pn, pn_to_pos
 
     
-    def updateplayersInHand(self, playersInHand):
+    def getplayersInHand(self, playersInHand):
         new = {0: playersInHand[0]}
         for num in playersInHand:
             if num == 0:
@@ -103,17 +109,23 @@ class Reader:
         return bets
     """
 
-    def updateActivePlayer(self, lastActivePlayer, playersInHand):
+    def getActivePlayer(self, playersInHand):
         for num in playersInHand:
             bbox = self.areas[self.table]['playerActive'][num]
             img = self.getPilImage(bbox)
             img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2GRAY)
             if containsTemplate(img, self.cvPlayerActive) or containsTemplate(img, self.cvPlayerActiveTime):
                 return num
-        return lastActivePlayer
+        return None
 
 
-    def getWagers(self, pn_to_pos, pre=False):
+    def getWager(self, pn):
+        bbox = self.areas[self.table]['bets'][pn]
+        pilImg = self.getPilImage(bbox)
+        return getOcrBet(self.api, pilImg, self.scaleFactor, self.binThresh)
+
+
+    def getAllWagers(self, pn_to_pos, pre=False):
         """
         :param pn_to_pos: the active players (dict)
         :returns: bet amounts sorted by position (list of length 6)

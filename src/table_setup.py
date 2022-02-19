@@ -2,7 +2,7 @@ import sys
 import json
 import threading
 import win32gui, win32ui
-from win32api import GetSystemMetrics, GetSysColor
+from win32api import GetSystemMetrics, RGB
 from pynput import mouse
 from PIL import ImageGrab
 
@@ -22,7 +22,7 @@ class TableSetup:
         dcObj = win32ui.CreateDCFromHandle(dc)
         hwnd = win32gui.WindowFromPoint((0,0))
         brush = win32ui.CreateBrush()
-        brush.CreateSolidBrush(GetSysColor(26))
+        brush.CreateSolidBrush(RGB(255, 0, 0))
         monitor = (0, 0, GetSystemMetrics(0), GetSystemMetrics(1))
 
         while True:

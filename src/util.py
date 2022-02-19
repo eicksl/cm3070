@@ -5,8 +5,6 @@ from tesserocr import PyTessBaseAPI, PSM, OEM
 from PIL import Image, ImageOps
 
 
-CHIP_AREA_THRESH = 200  # threshold to use for the contour area of a stack of chips
-B_AREA = 69  # contour area of 'B' in 'BB' (big blinds)
 POS_RANKS_LIST = ['SB', 'BB', 'LJ', 'HJ', 'CO', 'BU']
 POS_RANKS_DICT = {'SB': 0, 'BB': 1, 'LJ': 2, 'HJ': 3, 'CO': 4, 'BU': 5}
 POS_RANKS_LIST_PRE = ['LJ', 'HJ', 'CO', 'BU', 'SB', 'BB']
@@ -15,6 +13,11 @@ SUIT_PIXELS = OrderedDict([
     ('s', [117, 117, 117]), ('c', [126, 171, 97]),
     ('d', [100, 145, 160]), ('h', [165, 98, 98]), ('ep', 25)
 ])
+OCR_MAP = {'g': '9', '10': 'T', 'lo': 'T'}
+HSV_LOWER = np.array([0, 0, 160], dtype=np.uint8)
+HSV_UPPER = np.array([95, 110, 255], dtype=np.uint8)
+BET_BG_LOWER = np.array([19, 57, 3], dtype=np.uint8)
+BET_BG_UPPER = np.array([23, 68, 6], dtype=np.uint8)
 
 
 def getOcrString(api, img):
@@ -74,9 +77,9 @@ def getOcrCard(api, img):
     string = api.GetUTF8Text().strip()
     #if len(string) == 0 or (len(string) == 2 and string != '10') or len(string) > 2:
     #    raise Exception("String '{}' is not an acceptable card value".format(string))
-    if string in ['10', 'lo']:
-        return 'T'
-    return string
+    if string in OCR_MAP:
+        return OCR_MAP[string]
+    return string[0]
 
 
 def test_getOcrCard(api, imgName, scaleFactor, binThresh):
@@ -121,8 +124,17 @@ def test_getOcrNumber(api, imgName, scaleFactor, binThresh):
 
 
 def scaleImage(img, scaleFactor):
-    """Scales a pillow image by a specified factor"""
-    return img.resize((img.size[0] * scaleFactor, img.size[1] * scaleFactor))
+    """
+    Scales an image by a specified factor. The image can be in either numpy
+    or pillow format.
+    """
+    if isinstance(img, np.ndarray):
+        return cv2.resize(
+            img, (img.shape[1] * scaleFactor, img.shape[0] * scaleFactor),
+            interpolation=cv2.INTER_CUBIC
+        )
+    else:
+        return img.resize((img.size[0] * scaleFactor, img.size[1] * scaleFactor))
 
 
 def preprocessImage(img, scaleFactor, binThresh, npImg=None):
@@ -162,28 +174,85 @@ def containsTemplate(area, template, threshold=0.9):
 
 
 def test_containsTemplate(areaImgName, templateImgName):
-    areaCv2Img = cv2.imread('../img/states/out/0/' + areaImgName, cv2.IMREAD_GRAYSCALE)
+    areaCv2Img = cv2.imread('../img/test/' + areaImgName, cv2.IMREAD_GRAYSCALE)
     templateCv2Img = cv2.imread('../img/' + templateImgName, cv2.IMREAD_GRAYSCALE)
     templateFound = containsTemplate(areaCv2Img, templateCv2Img)
     print(templateFound)
 
 
-def getOcrBet(api, pilImg, scaleFactor, binThresh, k=2):
+def getOcrBet(api, pilImg, scaleFactor, binThresh, B=69, C=50, k=5, m=2):
+    # first convert to BGR and threshold the image using a range of BGR values
+    # which makes the dark-green background white and the rest black
+    img = cv2.cvtColor(np.array(pilImg), cv2.COLOR_RGB2BGR)
+    mask = cv2.inRange(img, BET_BG_LOWER, BET_BG_UPPER)
+
+    # find the contour of the white portion of the mask
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    rect = None
+    for cnt in contours:
+        if cv2.contourArea(cnt) > C:
+            rect = cv2.boundingRect(cnt)
+    # if no contour, wager is not present, so just return None
+    if rect is None:
+        return None
+
+    # crop the original using the bounding rect
+    x, y, w, h = rect
+    img = img[y:y+h, x+k:x+w-k]
+
+    # take the grayscale and perform binary thresholding
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    _, mask = cv2.threshold(img, binThresh, 255, cv2.THRESH_BINARY)
+
+    # now find the first 'B' and crop it out of the grayscale image
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    rect = None
+    for i in range(len(contours)-1, -1, -1):
+        if cv2.contourArea(contours[i]) >= B:
+            rect = cv2.boundingRect(contours[i])
+            break
+    if rect:
+        img = img[:, :rect[0]-m]
+
+    # scale the image, apply median blurring for noise reduction, and then
+    # threshold it to get a black number on a white background
+    img = scaleImage(img, scaleFactor)
+    img = cv2.blur(img, (5, 5))
+    _, mask = cv2.threshold(img, binThresh, 255, cv2.THRESH_BINARY_INV)
+
+    # pass the result onward to the OCR algorithm
+    pilImg = Image.fromarray(mask)
+    #pilImg.save('../img/test/foo.png')
+    return getOcrNumber(api, pilImg, scaleFactor, binThresh, preprocess=False)
+
+
+def getOcrBet_old(api, pilImg, scaleFactor, binThresh, B=69, k=2):
     """
     :param k: constant to add to x+w of the left-most chip to the bet amount
+
+    TODO: pass the width of the table to the function and use that to estimate
+    what B_AREA, CHIP_AREA_THRESH, and k should be
     """
-    img = cv2.cvtColor(np.array(pilImg), cv2.COLOR_RGB2GRAY)
+    # an HSV-colour image will be used later to binarize the text
+    npImg = np.array(pilImg)
+    hsv = cv2.cvtColor(npImg, cv2.COLOR_RGB2HSV)
+    
+    # for now, find the contours of the image using the grayscale
+    img = cv2.cvtColor(npImg, cv2.COLOR_RGB2GRAY)
+    #cv2.imwrite('../img/test/gray.png', img)
     _, img = cv2.threshold(img, binThresh, 255, cv2.THRESH_BINARY)
+    #cv2.imwrite('../img/test/binarized.png', img)
     contours, _ = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if (len(contours) == 0):
         return None
     
+    # get the areas and bounding rects of all the contours
     cntAreas = np.zeros(len(contours))
     cntRects = np.zeros((len(contours), 4), dtype=np.uint16)
     for i in range(len(contours)):
         cntAreas[i] = cv2.contourArea(contours[i])
         cntRects[i] = cv2.boundingRect(contours[i])
-    # arg-sorted by the contour x position
+    # and now arg-sort them by the bounding rect's x position
     indices = np.apply_along_axis(lambda rect: rect[0], 1, cntRects).argsort()
 
     b1_u = -1  # index of the first 'B' in the unsorted arrays
@@ -191,29 +260,48 @@ def getOcrBet(api, pilImg, scaleFactor, binThresh, k=2):
 
     for i in range(len(indices)):
         # indices[i] is the index of the would-be-sorted array
-        if cntAreas[indices[i]] == B_AREA:
+        if cntAreas[indices[i]] == B:
             b1_u = indices[i]
             b1_s = i
             break
-    if b1_u == -1:
-        raise Exception("Could not find a 'B' in the bet amount image")
     
-    x, _, w, _ = cntRects[b1_u]
-    img = np.delete(img, np.s_[x:], axis=1)
-
     chip = -1  # index of the chip closest to the bet amount in the unsorted arrays
-    for i in range(b1_s, -1, -1):
-        if cntAreas[indices[i]] > CHIP_AREA_THRESH:
-            chip = indices[i]
-            break
+
+    if b1_u > -1:  # a 'B' was found
+        x, _, w, _ = cntRects[b1_u]
+        # delete the pixel columns of the first 'B' from the HSV iamge along with
+        # everything to the right of it
+        hsv = np.delete(hsv, np.s_[x:], axis=1)
+
+        for i in range(b1_s, -1, -1):
+            if cntAreas[indices[i]] > B:
+                chip = indices[i]
+                break
+    else:
+        # a 'B' should be present if the image is on the right side of the table and
+        # the bbox is positioned appropriately, so in all likelihood this is a
+        # situation where the chips are on the left side of the number and the 'BB'
+        # text was cut off
+        for i in range(len(indices)-1, -1, -1):
+            if cntAreas[indices[i]] > B:
+                chip = indices[i]
+                break
+    # if a chip could be found in the grayscale image, remove it from the HSV image
+    # along with everything to the left of it
     if chip > -1:
         x, _, w, _ = cntRects[chip]
-        img = np.delete(img, np.s_[:x+w+k], axis=1)
+        hsv = np.delete(hsv, np.s_[:x+w+k], axis=1)
 
-    img = cv2.bitwise_not(img)
-    pilImg = scaleImage(Image.fromarray(img), scaleFactor)
+    # now that any chips have been removed the image, the image is first scaled and
+    # then median blur is applied to it for noise reduction, after which it is
+    # then binarized using given range of HSV values to distinguish the white-ish text
+    hsv = scaleImage(hsv, scaleFactor)
+    hsv = cv2.blur(hsv, (5, 5))
+    result = cv2.bitwise_not(cv2.inRange(hsv, HSV_LOWER, HSV_UPPER))
+
+    # pass the result onward to the OCR algorithm
+    pilImg = Image.fromarray(result)
     pilImg.save('../img/test/foo.png')
-
     return getOcrNumber(api, pilImg, scaleFactor, binThresh, preprocess=False)
 
 
@@ -221,15 +309,18 @@ def getOcrBet(api, pilImg, scaleFactor, binThresh, k=2):
 if __name__ == '__main__':
     api = PyTessBaseAPI(path='../tessdata', psm=PSM.SINGLE_LINE, oem=OEM.LSTM_ONLY)
 
-    path = '../img/test/felt.png'
+    path = '../img/test/chips8.png'
     scaleFactor = 4
     binThresh = 160
+
+    #test_containsTemplate('tb1.png', 'playerActive.png')
 
     img = Image.open(path)
     res = getOcrBet(api, img, scaleFactor, binThresh)
     print(res)
 
-    #test_preprocessImage(imgName, scaleFactor, binThresh)
-    #test_getOcrNumber(api, imgName, scaleFactor, binThresh)
+    #img = Image.open(path)
+    #res = getCard(api, img, scaleFactor, binThresh)
+    #print(res)
 
     api.End()
