@@ -175,7 +175,7 @@ class StateManager:
         self.holeCards = holeCards
         self.playersInHand = self.pn_to_pos.copy()
         self.lastWager.update({'pn': self.pos_to_pn['BB'], 'amt': 1})
-        self.pnLastActive = self.pos_to_pn['LJ']
+        self.pnLastActive = self.pos_to_pn['LJ']  # NOTE: first player to act PF is not necessarily LJ
         #self.pnLastActive = self.pos_to_pn['BB']
 
 
