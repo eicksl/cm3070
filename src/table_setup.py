@@ -97,6 +97,7 @@ class TableSetup:
         print("(11) Set search areas for button image")
         print("(12) Set back of card image")
         print("(13) Set search areas for back of card image")
+        print("(14) Set street pot size area")
         print("\nAwaiting keyboard input...\n")
 
 
@@ -148,7 +149,6 @@ class TableSetup:
             elif num == 3:
                 # Set pot size area
                 self.setArea(strTable, 'pot')
-                self.saveConfig()
             elif num == 4:
                 # Set bet size areas
                 playerNum = self.getIntegerInput(6, 'player')
@@ -210,6 +210,9 @@ class TableSetup:
                 if playerNum in [0, 1]:
                     continue
                 self.setArea(strTable, 'cardBacks', playerNum)
+            elif num == 14:
+                # Set street pot size area
+                self.setArea(strTable, 'streetPot')
             else:
                 print("\nInput is invalid\n\n")
 

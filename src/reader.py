@@ -13,9 +13,9 @@ class Reader:
     def __init__(self, tableNum, debug=False):
         self.scaleFactor = 4
         self.binThresh = 160
+        self.table = 'table' + str(tableNum)
         with open('../config/tables.json') as file:
             self.areas = json.loads(file.read())
-        self.table = 'table' + str(tableNum)
         self.api = PyTessBaseAPI(path='../tessdata', psm=PSM.SINGLE_LINE, oem=OEM.LSTM_ONLY)
         self.cvBtn = cv2.imread('../img/button.png', cv2.IMREAD_GRAYSCALE)
         self.cvPlayerActive = cv2.imread('../img/playerActive.png', cv2.IMREAD_GRAYSCALE)
@@ -40,6 +40,13 @@ class Reader:
         return img
 
 
+    def existsCard(self, cardPos):
+        """Determines if a card exists at a given position"""
+        bbox = self.areas[self.table]['boardCards'][cardPos]
+        npImg = np.array(self.getPilImage(bbox))
+        return getCardSuit(npImg) is not None
+
+
     def getHoleCards(self):
         bboxes = self.areas[self.table]['holeCards']
         pilCard1 = self.getPilImage(bboxes[0])
@@ -53,10 +60,42 @@ class Reader:
         return strCard1 + strCard2
 
 
-    def isPreflop(self):
-        bbox = self.areas[self.table]['boardCards'][0]
-        npImg = np.array(self.getPilImage(bbox))
-        return getCardSuit(npImg) is None
+    def getStreetAndBoard(self, street, board):
+        """
+        Returns the current street and board. Cards are only read when they need
+        to be.
+        """
+        lstCardsPos = None
+
+        if street == 'pre':
+            if self.existsCard(0):
+                street = 'flop'
+                lstCardsPos = [0, 1, 2]
+        elif street == 'flop':
+            if self.existsCard(3):
+                street = 'turn'
+                lstCardsPos = [3]
+        elif street == 'turn':
+            if self.existsCard(4):
+                street = 'river'
+                lstCardsPos = [4]
+        elif street == 'river':
+            return street, board
+        else:
+            raise Exception("'{}' is not a valid street input".format(street))
+
+        if lstCardsPos is None:
+            return street, board
+        
+        for pos in lstCardsPos:
+            bbox = self.areas[self.table]['boardCards'][pos]
+            img = self.getPilImage(bbox)
+            card = getCard(self.api, img, self.scaleFactor, self.binThresh)
+            if not card:
+                raise Exception("Card not found at position " + str(pos))
+            board += card
+
+        return street, board
 
 
     def getPositions(self):
@@ -121,8 +160,20 @@ class Reader:
 
     def getWager(self, pn):
         bbox = self.areas[self.table]['bets'][pn]
-        pilImg = self.getPilImage(bbox)
-        return getOcrBet(self.api, pilImg, self.scaleFactor, self.binThresh)
+        img = self.getPilImage(bbox)
+        return getOcrBet(self.api, img, self.scaleFactor, self.binThresh)
+
+
+    def getPot(self, street=False):
+        if street:
+            potType = 'streetPot'
+            main = False
+        else:
+            potType = 'pot'
+            main = True
+        bbox = self.areas[self.table][potType][0]
+        img = self.getPilImage(bbox)
+        return getOcrBet(self.api, img, self.scaleFactor, self.binThresh, isMainPot=main)
 
 
     def getAllWagers(self, pn_to_pos, pre=False):
