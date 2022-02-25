@@ -21,6 +21,11 @@ sheet_not_found.png
 /img/states/*
 /img/debug/*
 /test/cookies/*
+/config/gtowiz-headers.json
+/config/gtowiz-tokens.json
+/config/zenith-tokens.json
+/config/zenith-cookies.txt
+/config/zenith-login-cookies.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -82,13 +82,18 @@ def getOcrCard(api, img):
     Returns a char representing the card value, e.g. '9', 'T', 'J', etc
     """
     api.SetImage(img)
-    string = api.GetUTF8Text().strip().split()[0]
-    #if len(string) == 0 or (len(string) == 2 and string != '10') or len(string) > 2:
-    #    raise Exception("String '{}' is not an acceptable card value".format(string))
+    #print('Output: ' + api.GetUTF8Text())
+    #print('List: ' + str(api.GetUTF8Text().strip().split())) 
+    try:
+        string = api.GetUTF8Text().strip().split()[0]
+    except IndexError:
+        return None
+    
     if string in OCR_MAP:
         return OCR_MAP[string]
     elif string[0] not in CARD_RANKS:
         raise Exception("getOcrCard: output string '{}' is unknown".format(string))
+    
     return string[0]
 
 
@@ -101,19 +106,28 @@ def test_getOcrCard(api, imgName, scaleFactor, binThresh):
         print(result)
 
 
-def getCard(api, img, scaleFactor, binThresh):
-    npImg = np.array(img)
+def getCard(api, pilImg, scaleFactor, binThresh):
+    npImg = np.array(pilImg)
     suit = getCardSuit(npImg)
     if not suit:
         return None
-    img = preprocessImage(img, scaleFactor, binThresh, npImg)
-    card = getOcrCard(api, img)
+    img = preprocessImage(npImg, scaleFactor, binThresh)
+    if img[img.shape[0]-1][0] == 0:
+        # fixes issues that may occur due to the white portion of the avatar
+        ind = int(img.shape[0] * 0.9)
+        img[ind:] = np.full((img.shape[0]-ind, img.shape[1]), 255, dtype=np.uint8)
+    #cv2.imwrite('../img/test/card-cropped.png', img)
+    card = getOcrCard(api, Image.fromarray(img))
+    if not card:
+        pilImg.save('../img/test/card-orig.png')
+        img.save('../img/test/card-mask.png')
+        raise Exception("Could not read card image saved as card-orig.png and card-mask.png")
     return card + suit
 
 
 def getOcrNumber(api, img, scaleFactor, binThresh, preprocess=True):
     if preprocess:
-        img = preprocessImage(img, scaleFactor, binThresh)
+        img = preprocessImage(np.array(img), scaleFactor, binThresh)
     api.SetImage(img)
     number = None
     #print(api.GetUTF8Text())
@@ -147,18 +161,19 @@ def scaleImage(img, scaleFactor):
         return img.resize((img.size[0] * scaleFactor, img.size[1] * scaleFactor))
 
 
-def preprocessImage(img, scaleFactor, binThresh, npImg=None):
-
-    def binarize(img, threshold, npImg):
-        if npImg is None:
-            npImg = np.array(img)
-        img = cv2.cvtColor(npImg, cv2.COLOR_RGB2GRAY)
-        #img = cv2.blur(img, (5, 5))
+def preprocessImage(img, scaleFactor, binThresh):
+    """
+    Takes a numpy image and applies preprocessing methods using a scale factor and
+    a binary threshold.
+    """
+    def binarize(img, threshold):
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        img = cv2.blur(img, (5, 5))
         _, binarized = cv2.threshold(img, threshold, 255, cv2.THRESH_BINARY_INV)
-        return Image.fromarray(binarized)
+        return binarized
 
     img = scaleImage(img, scaleFactor)
-    img = binarize(img, binThresh, npImg)
+    img = binarize(img, binThresh)
     return img
 
 
@@ -215,7 +230,7 @@ def getOcrStack(api, pilImg, scaleFactor, binThresh, k=25):
 
     # pass the result onward to the OCR algorithm
     pilImg = Image.fromarray(mask)
-    pilImg.save('../img/test/foo.png')
+    #pilImg.save('../img/test/foo.png')
     return getOcrNumber(api, pilImg, scaleFactor, binThresh, preprocess=False)
 
 
@@ -359,20 +374,22 @@ def getOcrBet_old(api, pilImg, scaleFactor, binThresh, B=69, k=2):
 
 if __name__ == '__main__':
     api = PyTessBaseAPI(path='../tessdata', psm=PSM.SINGLE_LINE, oem=OEM.LSTM_ONLY)
+    #api.SetVariable("tessedit_char_whitelist", "0123456789.JQKA")
 
-    path = '../img/test/chips3.png'
+    path = '../img/test/9h.png'
     scaleFactor = 4
     binThresh = 180
 
     #test_containsTemplate('tb1.png', 'playerActive.png')
 
-    img = Image.open(path)
-    res = getOcrBet(api, img, scaleFactor, binThresh, isMainPot=False)
-    #res = getOcrStack(api, img, scaleFactor, binThresh)
-    print(res)
-
     #img = Image.open(path)
-    #res = getCard(api, img, scaleFactor, binThresh)
+    #res = getOcrBet(api, img, scaleFactor, binThresh, isMainPot=False)
+    #res = getOcrStack(api, img, scaleFactor, binThresh)
     #print(res)
+
+    img = Image.open(path)
+    res = getCard(api, img, scaleFactor, binThresh)
+    #res = getOcrCard(api, img)
+    print(res)
 
     api.End()

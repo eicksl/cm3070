@@ -1,8 +1,8 @@
 import os, json, cv2
 import numpy as np
 from util import (
-    getCard, getOcrBet, containsTemplate, getCardSuit,
-    villainHasCards, POS_RANKS_DICT, POS_RANKS_DICT_PRE
+    getCard, getOcrBet, containsTemplate, getCardSuit, getOcrStack,
+    villainHasCards
 )
 from tesserocr import PyTessBaseAPI, PSM, OEM
 from PIL import Image, ImageGrab
@@ -17,6 +17,7 @@ class Reader:
         with open('../config/tables.json') as file:
             self.areas = json.loads(file.read())
         self.api = PyTessBaseAPI(path='../tessdata', psm=PSM.SINGLE_LINE, oem=OEM.LSTM_ONLY)
+        #self.api.SetVariable("tessedit_char_whitelist", "0123456789.JQKA")
         self.cvBtn = cv2.imread('../img/button.png', cv2.IMREAD_GRAYSCALE)
         self.cvPlayerActive = cv2.imread('../img/playerActive.png', cv2.IMREAD_GRAYSCALE)
         self.cvPlayerActiveTime = cv2.imread('../img/playerActiveTIME.png', cv2.IMREAD_GRAYSCALE)
@@ -176,25 +177,13 @@ class Reader:
         return getOcrBet(self.api, img, self.scaleFactor, self.binThresh, isMainPot=main)
 
 
-    def getAllWagers(self, pn_to_pos, pre=False):
-        """
-        :param pn_to_pos: the active players (dict)
-        :returns: bet amounts sorted by position (list of length 6)
-        """
-        wagers = [None] * 6  # indices correspond to pos order, elements are wagers
-        players = [-1] * 6  # elements are player numbers
-        for num in pn_to_pos:
-            bbox = self.areas[self.table]['bets'][num]
-            pilImg = self.getPilImage(bbox)
-            amount = getOcrBet(self.api, pilImg, self.scaleFactor, self.binThresh)
-            if amount:
-                if pre:
-                    index = POS_RANKS_DICT_PRE[pn_to_pos[num]]
-                else:
-                    index = POS_RANKS_DICT[pn_to_pos[num]]
-                wagers[index] = amount
-                players[index] = num
-        return wagers, players
+    def getStacks(self, playersInHand):
+        stacks = {}
+        for pn in playersInHand:
+            bbox = self.areas[self.table]['stacks'][pn]
+            img = self.getPilImg(bbox)
+            stacks[pn] = getOcrStack(self.api, img, self.scaleFactor, self.binThresh)
+        return stacks
 
 
 

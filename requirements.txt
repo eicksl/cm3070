@@ -8,8 +8,7 @@ opencv-python==4.5.5.62
 Pillow==9.0.1
 pynput==1.7.6
 pywin32==303
-pyWinhook @ file:///C:/Users/SPENCER/code/my-rta/pyWinhook-1.6.2-cp37-cp37m-win_amd64.whl
 requests==2.27.1
 six==1.16.0
-tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.4.0-tesseract-4.0.0/tesserocr-2.4.0-cp37-cp37m-win_amd64.whl
+tesserocr @ file:///C:/Users/SPENCER/code/rta/tesserocr-2.5.2-cp310-cp310-win_amd64.whl
 urllib3==1.26.8

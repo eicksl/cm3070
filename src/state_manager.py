@@ -17,8 +17,8 @@ class StateManager:
         self.verbose = verbose
         self.reader = Reader(tableNum, debug=debug)
         self.interval = 3
-        self.pn_to_pos = {0: ''}
-        self.pos_to_pn = {}
+        self.pn_to_pos = {}  # int to str dict of player numbers and their positions
+        self.pos_to_pn = {}  # inversion of the above
         self.playersInHand = {}
         self.street = 'pre'
         self.lastStreet = 'pre'
@@ -28,10 +28,10 @@ class StateManager:
         self.lastPot = 1.5
         self.unrakedPot = 1.5
         self.pfRaises = 0  # preflop raises
-        # list elements of self.line are tuples in the form of (pn, action, investment)
+        # list elements of self.line are tuples in the form of (pos, action, investment)
         # investment here is the total money the player has in front of them after
         # performing that action
-        self.line = {'pre': [], 'flop': [], 'turn': [], 'river': []}
+        self.line = {'pre': [], 'flop': [], 'turn': [], 'river': []}  # represents the state
         self.playerHistory = {}  # player-specific lines and investment per street
         self.pnLastActive = None  # active player from the last update
         self.pnActive = None  # currently active player
@@ -139,9 +139,34 @@ class StateManager:
         return players[lapInd:] + players[:lapInd]
 
 
+    def getEffStacks(self):
+        """Returns the effective stack size"""
+        # if hand is multiway, just use 100bb eff stacks
+        if len(self.playersInHand) > 2:
+            return 100
+        stacks = self.reader.getStacks(self.playersInHand)
+        return min(stacks.values())
+
+
     def addAction(self, pn, agg, wager):
+        """Appends an action to the line and updates the player history"""
+        def _getPctPot():
+            """Converts the wager to a percentage of the unraked pot"""
+            if agg == 'R':
+                return round(
+                    (wager - self.lastWager['amt'])
+                    / (self.unrakedPot + self.lastWager['amt'])
+                    * 100.0
+                )
+            elif agg == 'B':
+                return round(wager / self.unrakedPot * 100.0)
+            else:
+                return 0
+        
         pos = self.pn_to_pos[pn]
         history = self.playerHistory[pos]
+        pctPot = _getPctPot()
+
         if agg in ['C', 'B', 'R']:
             # amount is the additional amount put in
             # e.g. amount is 2 if BB calls a 3x open
@@ -154,7 +179,8 @@ class StateManager:
                 if self.street == 'pre':
                     self.pfRaises += 1
                 self.lastWager.update({'pn': pn, 'amt': wager})
-        action = (pos, agg, wager)
+        
+        action = (pos, agg, pctPot)
         self.line[self.street].append(action)
         history['actions'][self.street].append(action)
 
@@ -175,7 +201,7 @@ class StateManager:
         self.holeCards = holeCards
         self.playersInHand = self.pn_to_pos.copy()
         self.lastWager.update({'pn': self.pos_to_pn['BB'], 'amt': 1})
-        self.pnLastActive = self.pos_to_pn['LJ']  # NOTE: first player to act PF is not necessarily LJ
+        self.pnLastActive = self.pos_to_pn['LJ']  # NOTE: first player to act pre is not necessarily LJ
         #self.pnLastActive = self.pos_to_pn['BB']
 
 
@@ -504,8 +530,8 @@ if __name__ == '__main__':
     keyboard.add_hotkey('esc', lambda: os.system('taskkill /im winpty-agent.exe'))
     stateManager = StateManager(1, debug=True)
     #stateManager.recordStates()
-    stateManager.run()
-    #stateManager.test_run()
+    #stateManager.run()
+    stateManager.test_run()
     """
     stateManager.playersInHand = {
         0: 'BU', 3: 'LJ', 4: 'HJ', 5: 'CO', 1: 'SB', 2: 'BB'
