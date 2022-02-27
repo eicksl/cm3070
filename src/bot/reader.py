@@ -1,11 +1,11 @@
 import os, json, cv2
 import numpy as np
-from util import (
-    getCard, getOcrBet, containsTemplate, getCardSuit, getOcrStack,
-    villainHasCards
-)
 from tesserocr import PyTessBaseAPI, PSM, OEM
 from PIL import Image, ImageGrab
+from src.bot.util import (
+    getCard, getOcrBet, containsTemplate, getCardSuit, getOcrStack, villainHasCards
+)
+from src.bot.constants import CONFIG_DIR, IMAGE_DIR, TESSDATA_DIR  # type: ignore
 
 
 class Reader:
@@ -14,13 +14,13 @@ class Reader:
         self.scaleFactor = 4
         self.binThresh = 160
         self.table = 'table' + str(tableNum)
-        with open('../config/tables.json') as file:
+        with open(CONFIG_DIR + 'tables.json') as file:
             self.areas = json.loads(file.read())
-        self.api = PyTessBaseAPI(path='../tessdata', psm=PSM.SINGLE_LINE, oem=OEM.LSTM_ONLY)
+        self.api = PyTessBaseAPI(path=TESSDATA_DIR, psm=PSM.SINGLE_LINE, oem=OEM.LSTM_ONLY)
         #self.api.SetVariable("tessedit_char_whitelist", "0123456789.JQKA")
-        self.cvBtn = cv2.imread('../img/button.png', cv2.IMREAD_GRAYSCALE)
-        self.cvPlayerActive = cv2.imread('../img/playerActive.png', cv2.IMREAD_GRAYSCALE)
-        self.cvPlayerActiveTime = cv2.imread('../img/playerActiveTIME.png', cv2.IMREAD_GRAYSCALE)
+        self.cvBtn = cv2.imread(IMAGE_DIR + 'button.png', cv2.IMREAD_GRAYSCALE)
+        self.cvPlayerActive = cv2.imread(IMAGE_DIR + 'playerActive.png', cv2.IMREAD_GRAYSCALE)
+        self.cvPlayerActiveTime = cv2.imread(IMAGE_DIR + 'playerActiveTIME.png', cv2.IMREAD_GRAYSCALE)
         self.debug = debug
         self.debugState = 0
         self.debugFileName = 0
@@ -30,7 +30,7 @@ class Reader:
         if self.debug == False:
             return ImageGrab.grab(bbox)
 
-        base = '../img/debug/'
+        base = IMAGE_DIR + 'debug/'
         path = base + str(self.debugState) + '.png'
         img = Image.open(path).crop(bbox)
         path = base + 'out/' + str(self.debugState)
@@ -192,5 +192,5 @@ if __name__ == '__main__':
     for i in range(6):
         bbox = reader.areas[reader.table]['buttons'][i]
         img = ImageGrab.grab(bbox)
-        path = '../img/test/{}.png'.format(i)
+        path = IMAGE_DIR + 'test/{}.png'.format(i)
         img.save(path)

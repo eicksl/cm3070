@@ -1,10 +1,10 @@
 import os
 import time
 import json
-from reader import Reader
-from util import (
+from src.bot.reader import Reader
+from src.bot.constants import (  # type: ignore
     POS_RANKS_LIST_PRE, POS_RANKS_DICT_PRE, POS_RANKS_LIST_PRE,
-    POS_RANKS_DICT, RAKE, RAKE_CAP
+    POS_RANKS_DICT, RAKE, RAKE_CAP, IMAGE_DIR
 )
 from PIL import ImageGrab
 
@@ -156,10 +156,9 @@ class StateManager:
                 return round(
                     (wager - self.lastWager['amt'])
                     / (self.unrakedPot + self.lastWager['amt'])
-                    * 100.0
                 )
             elif agg == 'B':
-                return round(wager / self.unrakedPot * 100.0)
+                return round(wager / self.unrakedPot)
             else:
                 return 0
         
@@ -167,11 +166,21 @@ class StateManager:
         history = self.playerHistory[pos]
         pctPot = _getPctPot()
 
+        # the following will be used to convert between pct of pot and BB raise sizes
+        potAfterCall = None
+        lastWager = self.lastWager['amt']
+        # used to find the wager of "min-raise" actions in Zenith
+        invBeforeRaise = history['invested'][self.street]
+
         if agg in ['C', 'B', 'R']:
             # amount is the additional amount put in
             # e.g. amount is 2 if BB calls a 3x open
             # the negative term should be zero in the case of a bet
             amount = wager - history['invested'][self.street]
+            if agg == 'R':
+                potAfterCall = (
+                    self.unrakedPot + (self.lastWager['amt'] - history['invested'][self.street])
+                )
             self.unrakedPot += amount
             history['invested'][self.street] += amount
             history['totalInv'] += amount
@@ -180,7 +189,11 @@ class StateManager:
                     self.pfRaises += 1
                 self.lastWager.update({'pn': pn, 'amt': wager})
         
-        action = (pos, agg, pctPot)
+        action = {'pos': pos, 'agg': agg, 'wager': wager, 'pctPot': pctPot}
+        #action = [pos, agg, pctPot, wager]
+        if agg == 'R':
+            action.update({'potAfterCall': potAfterCall, 'lastWager': lastWager})
+            #action += [potAfterCall, lastWager]
         self.line[self.street].append(action)
         history['actions'][self.street].append(action)
 
@@ -472,13 +485,13 @@ class StateManager:
 
     def run(self):
         if self.debug:
-            path = '../img/debug'
+            path = IMAGE_DIR + 'debug'
             if not os.path.exists(path):
                 os.makedirs(path)
         
         while True:
             if self.debug:
-                path = '../img/debug/{}.png'.format(self.reader.debugState)
+                path = IMAGE_DIR + 'debug/{}.png'.format(self.reader.debugState)
                 ImageGrab.grab().save(path)
 
             start = time.time()
@@ -495,7 +508,7 @@ class StateManager:
 
     def test_run(self):
         self.verbose = True
-        path = '../img/debug'
+        path = IMAGE_DIR + 'debug'
         files = [name for name in os.listdir(path) if os.path.isfile(path + '/' + name)]
         nums = sorted([int(file.split('.')[0]) for file in files])
         minFileNum = nums[0]
@@ -513,14 +526,14 @@ class StateManager:
 
 
     def recordStates(self):
-        path = '../img/states'
+        path = IMAGE_DIR + 'states'
         if not os.path.exists(path):
             os.makedirs(path)
         
         count = 0
         while True:
             keyboard.wait('f9')
-            ImageGrab.grab().save('../img/states/{}.png'.format(count))
+            ImageGrab.grab().save('{}states/{}.png'.format(IMAGE_DIR, count))
             count += 1
 
 

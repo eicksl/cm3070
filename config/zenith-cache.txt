@@ -1,0 +1,14 @@
+HJr060%2FCOf
+["BUf", "BUc", "BUr060", "BUr070", "BUr080", "BUr090", "BUr100", "BUr110", "BUr120"]
+HJr050
+["COf", "COc", "COr060", "COr070", "COr080", "COr090", "COr100", "COr110"]
+HJr050%2FCOf%2F
+["BUf", "BUc", "BUr060", "BUr070", "BUr080", "BUr090", "BUr100", "BUr110", "BUr120"]
+HJr050%2FCOf%2FBUr090%2FSBf%2FBBf
+["HJf", "HJc", "HJmin", "HJr050", "HJr060", "HJr075", "HJr100", "HJr125", "HJj"]
+HJr050%2FCOf%2FBUr090%2FSBf%2FBBf%2F
+["HJf", "HJc", "HJmin", "HJr050", "HJr060", "HJr075", "HJr100", "HJr125", "HJj"]
+HJr050%2FCOf%2FBUr090%2FSBf%2FBBf%2FHJr050
+["BUf", "BUc", "BUmin", "BUr050", "BUj"]
+HJr050%2FCOf%2FBUr090%2FSBf%2FBBf%2FHJmin
+["BUf", "BUc", "BUmin", "BUr050", "BUj"]

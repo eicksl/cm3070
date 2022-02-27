@@ -5,6 +5,7 @@ import win32gui, win32ui
 from win32api import GetSystemMetrics, RGB
 from pynput import mouse
 from PIL import ImageGrab
+from src.bot.globals import CONFIG_DIR, IMAGE_DIR
 
 
 class TableSetup:
@@ -13,7 +14,7 @@ class TableSetup:
         self.displayBoxes = False
         self.coordinates = None
         self.clickState = {}
-        with open('../config/tables.json') as file:
+        with open(CONFIG_DIR + 'tables.json') as file:
             self.config = json.loads(file.read())
 
 
@@ -54,7 +55,7 @@ class TableSetup:
 
 
     def saveConfig(self):
-        with open('../config/tables.json', 'w') as file:
+        with open(CONFIG_DIR + 'tables.json', 'w') as file:
             file.write(json.dumps(self.config, indent=4, sort_keys=True))
 
 
@@ -178,10 +179,10 @@ class TableSetup:
                 print("Create two images: the first for normal time, the second for timebank")
                 bbox = self.getBbox()
                 img = ImageGrab.grab(bbox)
-                img.save('../img/playerActive.png')
+                img.save(IMAGE_DIR + 'playerActive.png')
                 bbox = self.getBbox()
                 img = ImageGrab.grab(bbox)
-                img.save('../img/playerActiveTIME.png')
+                img.save(IMAGE_DIR + 'playerActiveTIME.png')
             elif num == 9:
                 # Set search areas for "action on player" images
                 playerNum = self.getIntegerInput(6, 'player')
@@ -192,7 +193,7 @@ class TableSetup:
                 # Set button image
                 bbox = self.getBbox()
                 img = ImageGrab.grab(bbox)
-                img.save('../img/button.png')
+                img.save(IMAGE_DIR + 'button.png')
             elif num == 11:
                 # Set search areas for button image
                 playerNum = self.getIntegerInput(6, 'player')
@@ -203,7 +204,7 @@ class TableSetup:
                 # Set back of card image (not used in current implementation)
                 bbox = self.getBbox()
                 img = ImageGrab.grab(bbox)
-                img.save('../img/cardBack.png')
+                img.save(IMAGE_DIR + 'cardBack.png')
             elif num == 13:
                 # Set search areas for back of card image
                 playerNum = self.getIntegerInput(6, 'player')
