@@ -20,7 +20,10 @@ SUIT_PIXELS = OrderedDict([
     ('s', [117, 117, 117]), ('c', [126, 171, 97]),
     ('d', [100, 145, 160]), ('h', [165, 98, 98]), ('ep', 25)
 ])
-OCR_MAP = {'g': '9', '10': 'T', 'lo': 'T', 'lio': 'T'}
+OCR_MAP = {
+    'a': '4', 'S': '8', 'c': '9', 'g': '9', '10': 'T', 'lo': 'T', 'lO': 'T',
+    'iO': 'T', 'IO': 'T', 'lio': 'T', '[|': 'T', '(0)': 'T'
+}
 HSV_LOWER = np.array([0, 0, 160], dtype=np.uint8)
 HSV_UPPER = np.array([95, 110, 255], dtype=np.uint8)
 #BET_BG_LOWER = np.array([19, 57, 3], dtype=np.uint8)

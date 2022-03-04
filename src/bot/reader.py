@@ -5,7 +5,7 @@ from PIL import Image, ImageGrab
 from src.bot.util import (
     getCard, getOcrBet, containsTemplate, getCardSuit, getOcrStack, villainHasCards
 )
-from src.bot.constants import CONFIG_DIR, IMAGE_DIR, TESSDATA_DIR  # type: ignore
+from src.bot.constants import CONFIG_DIR, IMAGE_DIR, TESSDATA_DIR
 
 
 class Reader:
@@ -181,7 +181,7 @@ class Reader:
         stacks = {}
         for pn in playersInHand:
             bbox = self.areas[self.table]['stacks'][pn]
-            img = self.getPilImg(bbox)
+            img = self.getPilImage(bbox)
             stacks[pn] = getOcrStack(self.api, img, self.scaleFactor, self.binThresh)
         return stacks
 

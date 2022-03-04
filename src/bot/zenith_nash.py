@@ -1,8 +1,7 @@
 import json
 import time
 import requests
-from random import SystemRandom
-from src.bot.constants import CONFIG_DIR, CARD_RANKS  # type: ignore
+from src.bot.constants import CONFIG_DIR, CARD_RANKS
 
 
 # MIN RAISE: 2X THE LAST WAGER MINUS CURRENT INVESTMENT OF MIN-RAISER BEFORE THE MIN-RAISE
@@ -119,7 +118,7 @@ class ZenithNash:
             print('\nStatus code: {}'.format(resp.status_code))
             raise Exception(
                 "Request to refresh the access token returned the following response:\n\n"
-                + json.dumps(resp.data, indent=4)
+                + json.dumps(resp.text, indent=4)
             )
         self._saveTokens(data)
 
@@ -339,8 +338,7 @@ class ZenithNash:
         avg = dict(map(lambda key: (key, 0), data['nextOptions']))
         for hand in data['frequency']:
             cards = hand['_row']
-            del hand['_row']
-            weight = sum(hand.values())
+            weight = sum(x for x in hand.values() if not isinstance(x, str))
             if weight == 0:
                 continue
 
@@ -352,9 +350,11 @@ class ZenithNash:
             #hand = dict(map(lambda key: (key, hand[key] / weight), hand))  # normalize
             #x hand = list(map(lambda x: x / weight, hand))  # normalize
             for action in hand:
-                avg[action] += hand[action] * combos
+                if action != '_row':
+                    avg[action] += hand[action] * combos
 
-        avg = dict(map(lambda key: (key, avg[key] / sum(avg.values())), avg))
+        sumAvg = sum(avg.values())
+        avg = dict(map(lambda key: (key, avg[key] / sumAvg), avg))
         
         # merge all non-all-in raise sizing into one action by normalizing and then
         # taking a weighted average
@@ -370,13 +370,7 @@ class ZenithNash:
                     pct = pct[1:]
                 pct = float(pct)
             elif k[2] == 'm':
-                """
-                wager = 2 * lastWager - heroInv
-                amtRaised = wager - lastWager
-                potAfterCall = pot + (lastWager - heroInv)
-                pct = amtRaised / potAfterCall
-                """
-                pct = self._getMinPct(heroPos)
+                pct = self._getMinPct(heroPos) * 100
             else:
                 continue
             sizings.append(pct)
@@ -391,8 +385,10 @@ class ZenithNash:
         # the average that was found above
         totRaise = 0
         options = []
-        hand = data['frequency'][self.indices[heroHand]]
-        tot = sum(freq for freq in hand.values())  # sum used for normalization
+        hand = data['frequency'][self.indices[heroHand]].copy()
+        del hand['_row']
+        # sum used for normalization
+        tot = sum(hand.values())
         for action, freq in hand.items():
             if action[2] not in ['m', 'r']:
                 options.append((action[2], freq / tot))
@@ -418,7 +414,7 @@ if __name__ == '__main__':
 
     #zenith.foo(1.5, 1, 0, 'A3o')
     #zenith.login()
-
+    """
     line = [
         {'pos': 'LJ', 'agg': 'F'},
         {'pos': 'HJ', 'agg': 'R', 'wager': 2.25, 'pctPot': 0.5, 'potAfterCall': 2.5, 'lastWager': 1.0},
@@ -436,6 +432,7 @@ if __name__ == '__main__':
     print(strategy)
     print()
     print(asmptLine)
+    """
     
     #time.sleep(2)
     zenith.session.close()

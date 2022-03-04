@@ -1,5 +1,4 @@
 import unittest
-import json
 from src.bot.zenith_nash import ZenithNash
 
 

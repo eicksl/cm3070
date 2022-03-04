@@ -2,6 +2,10 @@ import cv2
 import numpy as np
 from tesserocr import PyTessBaseAPI, PSM, OEM
 from PIL import Image, ImageOps
+from src.bot.constants import (
+    SUIT_PIXELS, CARD_RANKS, OCR_MAP, BET_BG_LOWER, BET_BG_UPPER,
+    HSV_LOWER, HSV_UPPER, IMAGE_DIR
+)
 
 
 def getOcrString(api, img):
@@ -68,8 +72,10 @@ def getOcrCard(api, img):
     if string in OCR_MAP:
         return OCR_MAP[string]
     elif string[0] not in CARD_RANKS:
-        raise Exception("getOcrCard: output string '{}' is unknown".format(string))
-    
+        img.save(IMAGE_DIR + 'test/unknown.png')
+        raise Exception(
+            "getOcrCard: output string '{}' is unknown. Check unknown.png.".format(string)
+        )
     return string[0]
 
 
@@ -95,8 +101,8 @@ def getCard(api, pilImg, scaleFactor, binThresh):
     #cv2.imwrite('../img/test/card-cropped.png', img)
     card = getOcrCard(api, Image.fromarray(img))
     if not card:
-        pilImg.save('../img/test/card-orig.png')
-        img.save('../img/test/card-mask.png')
+        pilImg.save(IMAGE_DIR + 'test/card-orig.png')
+        img.save(IMAGE_DIR + 'test/card-mask.png')
         raise Exception("Could not read card image saved as card-orig.png and card-mask.png")
     return card + suit
 

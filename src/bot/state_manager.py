@@ -1,8 +1,10 @@
 import os
 import time
 import json
+from random import SystemRandom
 from src.bot.reader import Reader
-from src.bot.constants import (  # type: ignore
+from src.bot.zenith_nash import ZenithNash
+from src.bot.constants import (
     POS_RANKS_LIST_PRE, POS_RANKS_DICT_PRE, POS_RANKS_LIST_PRE,
     POS_RANKS_DICT, RAKE, RAKE_CAP, IMAGE_DIR
 )
@@ -16,7 +18,8 @@ class StateManager:
         self.debug = debug
         self.verbose = verbose
         self.reader = Reader(tableNum, debug=debug)
-        self.interval = 3
+        self.zenith = ZenithNash()
+        self.interval = 2
         self.pn_to_pos = {}  # int to str dict of player numbers and their positions
         self.pos_to_pn = {}  # inversion of the above
         self.playersInHand = {}
@@ -32,9 +35,14 @@ class StateManager:
         # investment here is the total money the player has in front of them after
         # performing that action
         self.line = {'pre': [], 'flop': [], 'turn': [], 'river': []}  # represents the state
+        self.asmptLine = self.line.copy()
         self.playerHistory = {}  # player-specific lines and investment per street
         self.pnLastActive = None  # active player from the last update
         self.pnActive = None  # currently active player
+        self.numActions = 0
+        # numActions is the number of actions taken in the hand when Hero first became active,
+        # used to prevent multiple calls to decision methods for the same node
+        self.actionsAtHeroUpdate = None
         self.lastWager = {'pn': None, 'amt': None}  # pn and amount, reset every street
 
 
@@ -60,7 +68,7 @@ class StateManager:
                     continue
                 string += ', ' + key[0].upper() + key[1:] + ' '
                 for action in self.line[key]:
-                    string += action[1] + '-'
+                    string += action['agg'] + '-'
                 string = string[:-1]
             return string[2:]
         
@@ -150,37 +158,26 @@ class StateManager:
 
     def addAction(self, pn, agg, wager):
         """Appends an action to the line and updates the player history"""
-        def _getPctPot():
-            """Converts the wager to a percentage of the unraked pot"""
-            if agg == 'R':
-                return round(
-                    (wager - self.lastWager['amt'])
-                    / (self.unrakedPot + self.lastWager['amt'])
-                )
-            elif agg == 'B':
-                return round(wager / self.unrakedPot)
-            else:
-                return 0
-        
         pos = self.pn_to_pos[pn]
         history = self.playerHistory[pos]
-        pctPot = _getPctPot()
+        pctPot = 0
 
         # the following will be used to convert between pct of pot and BB raise sizes
         potAfterCall = None
         lastWager = self.lastWager['amt']
-        # used to find the wager of "min-raise" actions in Zenith
-        invBeforeRaise = history['invested'][self.street]
 
         if agg in ['C', 'B', 'R']:
             # amount is the additional amount put in
             # e.g. amount is 2 if BB calls a 3x open
             # the negative term should be zero in the case of a bet
             amount = wager - history['invested'][self.street]
-            if agg == 'R':
+            if agg == 'B':
+                pctPot = wager / self.unrakedPot
+            elif agg == 'R':
                 potAfterCall = (
-                    self.unrakedPot + (self.lastWager['amt'] - history['invested'][self.street])
+                    self.unrakedPot + (lastWager - history['invested'][self.street])
                 )
+                pctPot = (wager - lastWager) / potAfterCall
             self.unrakedPot += amount
             history['invested'][self.street] += amount
             history['totalInv'] += amount
@@ -196,6 +193,7 @@ class StateManager:
             #action += [potAfterCall, lastWager]
         self.line[self.street].append(action)
         history['actions'][self.street].append(action)
+        self.numActions += 1
 
 
     def initializeState(self, holeCards):
@@ -206,11 +204,14 @@ class StateManager:
         self.street = 'pre'
         self.lastStreet = 'pre'
         self.line = {'pre': [], 'flop': [], 'turn': [], 'river': []}
+        self.asmptLine = self.line.copy()
         self.resetPlayerHistory()
         self.pot = None
         self.lastPot = 1.5
         self.unrakedPot = 1.5
         self.pfRaises = 0
+        self.numActions = 0
+        self.actionsAtHeroUpdate = None
         self.holeCards = holeCards
         self.playersInHand = self.pn_to_pos.copy()
         self.lastWager.update({'pn': self.pos_to_pn['BB'], 'amt': 1})
@@ -243,6 +244,9 @@ class StateManager:
             self.updateLastStreetActions(playersInHand, playersToCheck)
             updated = True
             self.lastWager.update({'pn': None, 'amt': None})
+
+        if self.pnActive == 0 and self.numActions == self.actionsAtHeroUpdate:
+            return
         
         self.street = street
         self.playersInHand = playersInHand
@@ -290,6 +294,11 @@ class StateManager:
             else:
                 code = 'B' if self.lastWager['amt'] is None else 'R'
                 self.addAction(pn, code, wager)
+
+
+        if self.pnActive == 0:
+            self.actionsAtHeroUpdate = self.numActions
+            self.handleHeroDecision()
 
         self.pnLastActive = self.pnActive
         self.lastPot = self.pot
@@ -383,18 +392,6 @@ class StateManager:
             # unrakedEst is an estimate of what the actual unraked pot is for the current
             # timestep and is used to calculate Hero's prior-street raise sizing
             unrakedEst = min(rakedPot + RAKE_CAP, rakedPot / (1 - RAKE))
-            #print('unrakedEst: ' + str(unrakedEst))
-
-            """
-            # invFolded will be the sum of the total investments of all players that have
-            # thus far folded
-            invFolded = 0
-            for pos in POS_RANKS_LIST:
-                totalInv = self.playerHistory[pos]['totalInv']
-                if self.pos_to_pn[pos] not in playersInHand:
-                    invFolded += totalInv
-            print('invFolded: ' + str(invFolded))
-            """
 
             # inv_st is the total investments of all remaining players for the last street
             inv_st = 0
@@ -414,73 +411,46 @@ class StateManager:
             if pn in actions:
                 self.addAction(*actions[pn])
 
-        """
-        ranks = POS_RANKS_DICT_PRE if self.street == 'pre' else POS_RANKS_DICT
-        minRankVal = 6
-        lastPlayerPos = None  # pos of last player of prior street who is still in the hand
-        actions = []
-        for pn in self.playersInHand:
-            if pn not in playersInHand:
-                pos = self.pn_to_pos[pn]
-                history = self.playerHistory[pos]
-                action = (pos, 'F', 0)
-                actions.append(action)
-                history['actions'][self.street].append(action)
-            elif ranks[pos] < minRankVal:
-                minRankVal = ranks[pos]
-                lastPlayerPos = pos
 
-        history = self.playerHistory[lastPlayerPos]
-        diff = self.lastWager['amt'] - history['invested'][self.street]
-        if diff + self.unrakedPot >= self.pot:
-            pass
+    def handleHeroDecision(self):
 
-        return
+        def _pctToWager(pctPot):        
+            heroInv = self.playerHistory[self.pn_to_pos[0]]['invested'][self.street]
+            potAfterCall = self.unrakedPot + (self.lastWager['amt'] - heroInv)
+            wager = pctPot * potAfterCall + self.lastWager['amt']
+            return round(wager, 2)
 
-        # invFolded will be the sum of the total investments of all players that folded before
-        # the current timestep, whereas invInHand is for those still in the hand
-        invInHand, invFolded = 0, 0
-        for pos in POS_RANKS_LIST:
-            totalInv = self.playerHistory[pos]['totalInv']
-            if self.pos_to_pn[pos] in playersInHand:
-                invInHand += totalInv
-            else:
-                invFolded += totalInv
+        def _getDecisionString(decision, effStack):
+            agg = decision[0]
+            string = {'f': 'Fold', 'c': 'Call', 'r': 'Raise', 'j': 'All-in'}[agg]
+            if agg == 'r':
+                pct = decision[2]
+                string += ' {}% ({} BB)'.format(round(pct * 100), _pctToWager(pct))
+            elif agg == 'j':
+                string += ' ({} BB)'.format(effStack)
+            return string
 
-        # get a lower and upper bound estimate for the unraked pot at the current timestep
-        # minus the investments of folded players, then divided by the number of players who
-        # are still in the hand
-        #unraked = self.pot / (1 - RAKE)
-        #lower, upper = self.pot - invFolded, ceil(unraked * 100.0) / 100.0 - invFolded
-        #lower, upper = lower / len(playersInHand), upper / len(playersInHand)
-        lower = (self.pot - invFolded) / len(playersInHand)
-        upper = (self.unrakedPot - invFolded) / len(playersInHand)
-
-        if lower <= self.lastWager['amt'] <= upper:
-            # no changes to the pot occurred, just return
+        self.printState()
+        print('\nhandleHeroDecision')
+        if self.street != 'pre':
             return
+        effStack = self.getEffStacks()
+        strategy, self.asmptLine = self.zenith.getStrategy(
+            self.line['pre'], effStack, self.holeCards, self.pn_to_pos[0]
+        )
+        rng = SystemRandom().random()
+        tot = 0
+        decision = None
+        for action in strategy:
+            tot += action[1]
+            if rng < tot:
+                decision = action
+                break
+        assert decision is not None
 
-        #actions = []
-        sawHero = False
-        for pn in playersToCheck:
-            history = self.playerHistory[self.pn_to_pos[pn]]
-            if pn not in playersInHand:
-                action = (self.pn_to_pos[pn], 'F', 0)
-                actions.append(action)
-                history['actions'][self.street].append(action)
-            else:
-                # * no one but Hero could have raised since Hero would've been given a turn to act
-                # Situation 1: Hero called on last street (Hero is pnLastActive)
-                # Solution 1:
-                # Sitation 2: Villain snap-called on last street after Hero raised (Hero was pnLastActive)
-                # Solution 2:
-                # Situation 3: Villain snap-called after another villain called (Hero was not pnLastActive)
-                # Solution 3:
-                pass
-
-            if pn == 0:
-                sawHero == True
-        """
+        print('Strategy: {}'.format(strategy))
+        print('RNG: {}'.format(round(rng * 100)))
+        print('Decision: {}\n'.format(_getDecisionString(decision, effStack)))
 
 
     def run(self):
@@ -502,12 +472,13 @@ class StateManager:
                 self.reader.debugFileName = 0
 
             print('Ran update in {} seconds'.format(time.time() - start))
-            self.printState()
+            if self.pnActive != 0:
+                self.printState()
             time.sleep(self.interval)
 
 
     def test_run(self):
-        self.verbose = True
+        self.verbose = False
         path = IMAGE_DIR + 'debug'
         files = [name for name in os.listdir(path) if os.path.isfile(path + '/' + name)]
         nums = sorted([int(file.split('.')[0]) for file in files])

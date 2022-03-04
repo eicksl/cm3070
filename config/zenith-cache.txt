@@ -12,3 +12,53 @@ HJr050%2FCOf%2FBUr090%2FSBf%2FBBf%2FHJr050
 ["BUf", "BUc", "BUmin", "BUr050", "BUj"]
 HJr050%2FCOf%2FBUr090%2FSBf%2FBBf%2FHJmin
 ["BUf", "BUc", "BUmin", "BUr050", "BUj"]
+HJr080%2FCOf
+["BUf", "BUc", "BUr050", "BUr075", "BUr100", "BUj"]
+HJr060%2FCOf%2FBUf%2FSBf
+["BBf", "BBc", "BBr100", "BBr125", "BBr150", "BBr175", "BBr200", "BBr225", "BBr250", "BBr275", "BBr300", "BBj"]
+LJr080%2FHJf
+["COf", "COc", "COr050", "COr075", "COr100"]
+HJc%2F
+["COf", "COc", "COr050", "COr100", "COr150", "COr200", "COr250"]
+HJc%2FCOr100
+["BUf", "BUr050", "BUr075", "BUr100", "BUr125", "BUr150", "BUj"]
+HJr060%2FCOf%2FBUf
+["SBf", "SBc", "SBr100", "SBr125", "SBr150", "SBr175", "SBr200", "SBr225", "SBr250", "SBj"]
+HJc%2FCOf
+["BUf", "BUc", "BUr050", "BUr100", "BUr150", "BUr200", "BUr250"]
+LJr040%2FHJf%2FCOf
+["BUf", "BUc", "BUr050", "BUr060", "BUr070", "BUr080", "BUr090", "BUr100", "BUr110", "BUr120", "BUr130"]
+BUr060%2FSBf
+["BBf", "BBc", "BBr075", "BBr100", "BBr125", "BBr150", "BBr175", "BBr200", "BBr225", "BBr250", "BBr275", "BBr300", "BBj"]
+COr060%2FBUf%2FSBf
+["BBf", "BBc", "BBr100", "BBr125", "BBr150", "BBr175", "BBr200", "BBr225", "BBr250", "BBr275", "BBr300"]
+LJr080
+["HJf", "HJr050", "HJr075", "HJr100"]
+BUr040%2FSBc
+["BBf", "BBc", "BBr075", "BBr100", "BBr125", "BBr150", "BBr175", "BBr200", "BBr225", "BBr250", "BBj"]
+COr060%2FBUf
+["SBf", "SBc", "SBr100", "SBr125", "SBr150", "SBr175", "SBr200", "SBr225", "SBr250"]
+LJr080%2FHJf%2FCOf
+["BUf", "BUc", "BUr050", "BUr075", "BUr100"]
+COr080%2FBUf%2FSBf
+["BBf", "BBc", "BBr075", "BBr100", "BBr125", "BBr150", "BBr175", "BBr200", "BBr225", "BBr250", "BBj"]
+LJr080%2FHJf%2FCOf%2FBUc
+["SBf", "SBc", "SBr100", "SBr150", "SBr200", "SBj"]
+BUr060%2FSBc%2F
+["BBf", "BBc", "BBr075", "BBr100", "BBr125", "BBr150", "BBr175", "BBr200", "BBr225", "BBr250", "BBj"]
+BUr060%2FSBc%2FBBr100
+["BUf", "BUc", "BUmin", "BUr050", "BUr060", "BUr075", "BUr100", "BUr125", "BUj"]
+COr040%2FBUf
+["SBf", "SBc", "SBr100", "SBr125", "SBr150", "SBr175", "SBr200", "SBr225", "SBr250"]
+HJr080%2FCOf%2FBUf%2FSBf
+["BBf", "BBc", "BBr100", "BBr150", "BBr200", "BBr250", "BBr300", "BBj"]
+SBr100
+["BBf", "BBc", "BBr050", "BBr060", "BBr070", "BBr080", "BBr090", "BBr100", "BBr110", "BBr120", "BBr130", "BBr140", "BBr150", "BBr175", "BBr200", "BBr225", "BBr250"]
+HJr080%2FCOf%2FBUf
+["SBf", "SBc", "SBr100", "SBr150", "SBr200", "SBr250", "SBr300", "SBj"]
+HJr060
+["COf", "COc", "COr060", "COr070", "COr080", "COr090", "COr100", "COr110"]
+HJr060%2FCOf%2FBUc%2FSBf%2F
+["BBf", "BBc", "BBr100", "BBr125", "BBr150", "BBr175", "BBr200", "BBr225", "BBr250", "BBr275", "BBr300", "BBj"]
+HJr060%2FCOf%2FBUc%2FSBf%2FBBr125
+["HJf", "HJc", "HJmin", "HJr050", "HJr060", "HJr075", "HJj"]
