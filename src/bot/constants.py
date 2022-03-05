@@ -12,6 +12,7 @@ CARD_RANKS = {
     '2': 1, '3': 2, '4': 3, '5': 4, '6': 5, '7': 6, '8': 7, '9': 8,
     'T': 9, 'J': 10, 'Q': 11, 'K': 12, 'A': 13
 }
+WIZ_SUIT_RANKS = {'c': 0, 'd': 1, 'h': 2, 's': 3}
 POS_RANKS_LIST = ['SB', 'BB', 'LJ', 'HJ', 'CO', 'BU']
 POS_RANKS_DICT = {'SB': 0, 'BB': 1, 'LJ': 2, 'HJ': 3, 'CO': 4, 'BU': 5}
 POS_RANKS_LIST_PRE = ['LJ', 'HJ', 'CO', 'BU', 'SB', 'BB']

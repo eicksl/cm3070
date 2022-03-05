@@ -4,12 +4,9 @@ import requests
 from src.bot.constants import CONFIG_DIR, CARD_RANKS
 
 
-# MIN RAISE: 2X THE LAST WAGER MINUS CURRENT INVESTMENT OF MIN-RAISER BEFORE THE MIN-RAISE
-
 class ZenithNash:
 
     def __init__(self):
-        #self.baseUrl = 'https://preflop.zenith.poker/api/range_sets/100_STD/positions/HJ/freqs?version=20220109'
         self.loginUrl = (
             "https://zenith.poker/oauth/authorize/?response_type=code"
             + "&redirect_uri=https://preflop.zenith.poker/auth/token"
@@ -121,6 +118,7 @@ class ZenithNash:
                 + json.dumps(resp.text, indent=4)
             )
         self._saveTokens(data)
+        self.session.headers = self.headers
 
 
     def _saveTokens(self, tokens):
@@ -130,7 +128,6 @@ class ZenithNash:
             file.write(json.dumps(tokens, indent=4))
         self.refreshToken = tokens['refresh_token']
         self.headers.update({'Authorization': 'Bearer ' + tokens['access_token']})
-        self.session.headers = self.headers
 
 
     def _effStackToRangeSet(self, line, effStack):

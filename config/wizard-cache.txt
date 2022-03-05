@@ -1,0 +1,8 @@
+?gametype=Cash6m50zComplex&depth=100&stacks=&preflop_actions=
+[["R2.5", 2.5, 0.6]]
+?gametype=Cash6m50zComplex&depth=100&stacks=&preflop_actions=F
+[["R2.5", 2.5, 0.6], ["RAI", 100.0, 39.6]]
+?gametype=Cash6m50zComplex&depth=100&stacks=&preflop_actions=F-R2.5-F-F
+[["R11", 11.0, 1.42], ["RAI", 100.0, 16.25]]
+?gametype=Cash6m50zComplex&depth=100&stacks=&preflop_actions=F-R2.5-F-F-F-C&flop_actions=
+[["R1.25", 1.25, 0.23], ["R1.75", 1.75, 0.32], ["R2.25", 2.25, 0.41], ["R2.75", 2.75, 0.5], ["R3.25", 3.25, 0.59], ["R3.75", 3.75, 0.68], ["R4.5", 4.5, 0.82], ["R5.5", 5.5, 1.0], ["R6.9", 6.9, 1.25], ["R8.25", 8.25, 1.5], ["R11", 11.0, 2.0], ["R15.1", 15.1, 2.75], ["R19.25", 19.25, 3.5], ["RAI", 97.5, 17.73]]

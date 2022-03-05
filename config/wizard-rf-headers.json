@@ -1,0 +1,16 @@
+{
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Language": "en-US,en;q=0.5",
+    "Authorization": "",
+    "Connection": "keep-alive",
+    "Content-Length": "1565",
+    "Content-Type": "application/json;charset=utf-8",
+    "Host": "gtowizard.com",
+    "Origin": "https://app.gtowizard.com",
+    "Referer": "https://app.gtowizard.com/",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-site",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:97.0) Gecko/20100101 Firefox/97.0"
+}
