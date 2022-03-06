@@ -4,6 +4,7 @@ import json
 from random import SystemRandom
 from src.bot.reader import Reader
 from src.bot.zenith_nash import ZenithNash
+from src.bot.wizard_nash import WizardNash
 from src.bot.constants import (
     POS_RANKS_LIST_PRE, POS_RANKS_DICT_PRE, POS_RANKS_LIST_PRE,
     POS_RANKS_DICT, RAKE, RAKE_CAP, IMAGE_DIR
@@ -19,7 +20,10 @@ class StateManager:
         self.verbose = verbose
         self.reader = Reader(tableNum, debug=debug)
         self.zenith = ZenithNash()
-        self.interval = 2
+        self.wizard = WizardNash()
+        self.sawFlopHeadsUp = False
+        self.effStack = None
+        self.interval = 1
         self.pn_to_pos = {}  # int to str dict of player numbers and their positions
         self.pos_to_pn = {}  # inversion of the above
         self.playersInHand = {}
@@ -147,13 +151,17 @@ class StateManager:
         return players[lapInd:] + players[:lapInd]
 
 
-    def getEffStacks(self):
-        """Returns the effective stack size"""
-        # if hand is multiway, just use 100bb eff stacks
+    def updateEffStack(self):
+        """Updates the effective stack size when heads up"""
         if len(self.playersInHand) > 2:
-            return 100
+            return
         stacks = self.reader.getStacks(self.playersInHand)
-        return min(stacks.values())
+        if stacks is None:
+            print('Could not read stack size. Assuming 100bb effective.')
+            return
+        for pn in stacks:
+            stacks[pn] += self.playerHistory[self.pn_to_pos[pn]]['totalInv']
+        self.effStack = min(stacks.values())
 
 
     def addAction(self, pn, agg, wager):
@@ -205,6 +213,8 @@ class StateManager:
         self.lastStreet = 'pre'
         self.line = {'pre': [], 'flop': [], 'turn': [], 'river': []}
         self.asmptLine = self.line.copy()
+        self.sawFlopHeadsUp = False
+        self.effStack = None
         self.resetPlayerHistory()
         self.pot = None
         self.lastPot = 1.5
@@ -243,10 +253,12 @@ class StateManager:
         if street != self.street:
             self.updateLastStreetActions(playersInHand, playersToCheck)
             updated = True
+            if self.street == 'pre' and len(playersInHand) == 2:
+                self.sawFlopHeadsUp = True
             self.lastWager.update({'pn': None, 'amt': None})
 
-        if self.pnActive == 0 and self.numActions == self.actionsAtHeroUpdate:
-            return
+        #if self.pnActive == 0 and self.numActions == self.actionsAtHeroUpdate:
+        #    return
         
         self.street = street
         self.playersInHand = playersInHand
@@ -295,10 +307,10 @@ class StateManager:
                 code = 'B' if self.lastWager['amt'] is None else 'R'
                 self.addAction(pn, code, wager)
 
-
         if self.pnActive == 0:
-            self.actionsAtHeroUpdate = self.numActions
             self.handleHeroDecision()
+            self.actionsAtHeroUpdate = self.numActions
+            #self.handleHeroDecision()
 
         self.pnLastActive = self.pnActive
         self.lastPot = self.pot
@@ -338,9 +350,14 @@ class StateManager:
         # case call: set it equal to [max(rakedPot - RAKE_CAP, rakedPot / (1 - RAKE)) - self.unrakedPot]
         # case r/c:
         rakedPot = self.reader.getPot(street=True)
+        if rakedPot is None:
+            print('Cannot read raked pot... Sleeping...')
+            time.sleep(5)
+            rakedPot = self.reader.getPot(street=True)
 
         # handle cases where the remaining players checked or folded
         if self.unrakedPot >= rakedPot:
+            print('TEST: ', self.unrakedPot, rakedPot)
             for pn in playersToCheck:
                 if pn in playersInHand:
                     if len(self.playerHistory[self.pn_to_pos[pn]]['actions'][self.street]) == 0:
@@ -414,30 +431,61 @@ class StateManager:
 
     def handleHeroDecision(self):
 
-        def _pctToWager(pctPot):        
-            heroInv = self.playerHistory[self.pn_to_pos[0]]['invested'][self.street]
-            potAfterCall = self.unrakedPot + (self.lastWager['amt'] - heroInv)
-            wager = pctPot * potAfterCall + self.lastWager['amt']
+        def _pctToWager(agg, pctPot):
+            if agg == 'B':
+                wager = pctPot * self.unrakedPot
+            else:
+                heroInv = self.playerHistory[self.pn_to_pos[0]]['invested'][self.street]
+                potAfterCall = self.unrakedPot + (self.lastWager['amt'] - heroInv)
+                wager = pctPot * potAfterCall + self.lastWager['amt']
             return round(wager, 2)
 
-        def _getDecisionString(decision, effStack):
+        def _getPreDecisionString(decision, effStack):
             agg = decision[0]
             string = {'f': 'Fold', 'c': 'Call', 'r': 'Raise', 'j': 'All-in'}[agg]
             if agg == 'r':
                 pct = decision[2]
-                string += ' {}% ({} BB)'.format(round(pct * 100), _pctToWager(pct))
+                string += ' {}% ({} BB)'.format(round(pct * 100), _pctToWager('R', pct))
             elif agg == 'j':
                 string += ' ({} BB)'.format(effStack)
             return string
 
+        def _getPostDecisionString(decision):
+            agg = decision[0]
+            if agg == 'R' and self.lastWager['amt'] is None:
+                agg = 'B'
+            string = {'F': 'Fold', 'X': 'Check', 'C': 'Call', 'B': 'Bet', 'R': 'Raise'}[agg]
+            if agg in ['B', 'R']:
+                pct = decision[2]
+                string += ' {}% ({} BB)'.format(round(pct * 100), _pctToWager(agg, pct))
+            return string
+
+        if self.actionsAtHeroUpdate == self.numActions:
+            return
+        
         self.printState()
         print('\nhandleHeroDecision')
-        if self.street != 'pre':
+        return
+
+        if not self.effStack and len(self.playersInHand) == 2:
+            self.updateEffStack()
+        effStack = 100 if not self.effStack else self.effStack
+
+        if self.street == 'pre':
+            strategy, self.asmptLine = self.zenith.getStrategy(
+                self.line['pre'], effStack, self.holeCards, self.pn_to_pos[0]
+            )
+        else:
+            if not self.sawFlopHeadsUp:
+                return
+            strategy, self.asmptLine = self.wizard.getStrategy(
+                self.line, effStack, self.holeCards, self.board
+            )
+
+        if strategy is None:
+            print('No strategy available for the current state')
             return
-        effStack = self.getEffStacks()
-        strategy, self.asmptLine = self.zenith.getStrategy(
-            self.line['pre'], effStack, self.holeCards, self.pn_to_pos[0]
-        )
+        
         rng = SystemRandom().random()
         tot = 0
         decision = None
@@ -448,9 +496,15 @@ class StateManager:
                 break
         assert decision is not None
 
+        if self.street != 'pre':
+            print('Line (A): {}'.format(self.asmptLine))
         print('Strategy: {}'.format(strategy))
         print('RNG: {}'.format(round(rng * 100)))
-        print('Decision: {}\n'.format(_getDecisionString(decision, effStack)))
+        if self.street == 'pre':
+            strDecision = _getPreDecisionString(decision, effStack)
+        else:
+            strDecision = _getPostDecisionString(decision)
+        print('Decision: {}\n'.format(strDecision))
 
 
     def run(self):

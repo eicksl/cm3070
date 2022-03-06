@@ -183,6 +183,8 @@ class Reader:
             bbox = self.areas[self.table]['stacks'][pn]
             img = self.getPilImage(bbox)
             stacks[pn] = getOcrStack(self.api, img, self.scaleFactor, self.binThresh)
+            if stacks[pn] is None:
+                return None
         return stacks
 
 

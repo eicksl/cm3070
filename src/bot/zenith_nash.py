@@ -96,6 +96,7 @@ class ZenithNash:
             print('Logged in to Zenith successfully')
         
         self._saveTokens(tokens)
+        self.session.headers = self.headers
 
 
     def renewTokens(self):
@@ -112,6 +113,9 @@ class ZenithNash:
             print("Refresh request returned the following non-JSON response:\n\n" + resp.text)
             raise error
         if resp.status_code != 200 or 'access_token' not in data:
+            if resp.status_code == 400:
+                self.login()
+                return
             print('\nStatus code: {}'.format(resp.status_code))
             raise Exception(
                 "Request to refresh the access token returned the following response:\n\n"
@@ -168,7 +172,7 @@ class ZenithNash:
 
 
     def _getNearestRaise(self, path, action, url, rset):
-        if path == '':
+        if path == '' and rset == '100_STD':
             options = self.rfi[action['pos']][rset]['nextOptions']
         elif path in self.cache:
             options = self.cache[path]
@@ -204,7 +208,8 @@ class ZenithNash:
         if pct < sizes[0] - self.thresh:
             return None, None
         elif pct > sizes[-1] + self.thresh:
-            return 'j' if hasJam else (None, None)
+            # TODO: may want to use the exact jam pct of pot instead of 100x the pot
+            return (100, 'j') if hasJam else (None, None)
         
         nearest = min(sizes, key=lambda x: abs(x - pct))
         strNearest = str(nearest)
@@ -261,8 +266,7 @@ class ZenithNash:
                     'wager': wager,
                     'pctPot': pctRaise,
                     'potAfterCall': potAfterCall,
-                    'lastWager': self.lastWager,
-                    #'minPct': minPct
+                    'lastWager': self.lastWager
                 }
                 asmptLine.append(mod)
                 amtPutIn = wager - self.inv[action['pos']]
@@ -291,6 +295,8 @@ class ZenithNash:
         
         url += '?node_path={}&version={}'.format(nodePath, self.versions[rset])
         data = self.sendRequest(url)
+        if data['terminal'] == True:
+            return None, line
 
         if nodePath not in self.cache:
             with open(CONFIG_DIR + 'zenith-cache.txt', 'a') as file:
@@ -410,7 +416,7 @@ if __name__ == '__main__':
     #zenith.sendRequest(url)
 
     #zenith.foo(1.5, 1, 0, 'A3o')
-    #zenith.login()
+    zenith.login()
     """
     line = [
         {'pos': 'LJ', 'agg': 'F'},
@@ -431,5 +437,5 @@ if __name__ == '__main__':
     print(asmptLine)
     """
     
-    #time.sleep(2)
+    time.sleep(2)
     zenith.session.close()

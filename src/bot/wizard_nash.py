@@ -9,13 +9,13 @@ class WizardNash:
     def __init__(self):
         # use JSON.parse(localStorage.getItem('user_info')) in the browser to get the access and
         # refresh tokens, then copy them to config/wizard-tokens.json
-        self.gameType = "Cash6m50zComplex"
+        self.rakeStruct = '50'
         self.cacheChange = "2022-02-06T00%3A00Z"
         self.baseUrl = "https://gtowizard.com/api/v1/poker/solution/"
         self.optionsUrl = "https://gtowizard.com/api/v1/poker/next-actions/"
         self.refreshUrl = "https://gtowizard.com/api/v1/token/refresh/"
-        self.wait = True  # wait between intermediary requests
-        self.waitInterval = 1.5
+        self.wait = False  # wait between intermediary requests
+        self.waitInterval = 0.5
         self.depths = [20, 40, 50, 75, 100, 150, 200]
         self.session = requests.Session()
         self.cache = {}
@@ -74,7 +74,7 @@ class WizardNash:
 
 
     def sendRequest(self, url):
-        if time.time() - self.lastRefresh > 300:
+        if time.time() - self.lastRefresh > 600:
             self.renewAccessToken()
         resp = self.session.get(url)
         if resp.status_code == 204:
@@ -90,30 +90,40 @@ class WizardNash:
                 "Request to GTOWizard returned a 401 response. It is likely that "
                 + "the refresh token has expired.\n{}".format(json.dumps(data, indent=4))
             )
-        elif resp.status_code != 200 or 'solutions' not in data:
+        elif resp.status_code != 200 or 'solutions' not in data and 'next_actions' not in data:
             print('\nStatus code: {}'.format(resp.status_code))
             formatted = json.dumps(data, indent=4)
             raise Exception("Request to {} returned the following response:\n\n{}".format(url, formatted))
         return data
 
 
-    def _saveOptions(self, data, state):
+    def _saveOptions(self, data, state, isSolution=True):
         options = []
-        for obj in data['solutions']:
-            a = obj['action']
-            if a['code'][0] == 'R':
-                options.append([a['code'], float(a['betsize']), float(a['betsize_by_pot'])])
+        add = lambda a: options.append([a['code'], float(a['betsize']), float(a['betsize_by_pot'])])
+
+        if isSolution:
+            for obj in data['solutions']:
+                a = obj['action']
+                if a['code'][0] == 'R':
+                    add(a)
+        else:
+            for a in data['next_actions']['available_actions']:
+                if a['code'][0] == 'R':
+                    add(a)
+
         with open(CONFIG_DIR + 'wizard-cache.txt', 'a') as file:
             file.write('\n' + state + '\n' + json.dumps(options))
         self.cache[state] = options
+
         return options
 
 
-    def _getOptions(self, state, stem):
+    def _getOptions(self, state, stem, isSolution=False):
         if state in self.cache:
             options = self.cache[state]
         else:
-            url = self.baseUrl + state + stem
+            base = self.baseUrl if isSolution else self.optionsUrl
+            url = base + state + stem
             print(url)
             data = self.sendRequest(url)
             if data is None:
@@ -122,7 +132,7 @@ class WizardNash:
                 return []
             if self.wait:
                 time.sleep(self.waitInterval)
-            options = self._saveOptions(data, state)
+            options = self._saveOptions(data, state, isSolution)
         
         return options
 
@@ -148,7 +158,7 @@ class WizardNash:
 
             state = urlParams + asmpt[:-1]
             stem = (
-                "&flop_actions=&turn_actions=&river_actions=&board=&cache_change="
+                "&flop_actions=&turn_actions=&river_actions=&cache_change="
                 + self.cacheChange
             )
             options = self._getOptions(state, stem)
@@ -160,7 +170,7 @@ class WizardNash:
         return asmpt[:-1]
 
 
-    def getPostActions(self, asmptLine, realLine, urlParams, board):
+    def getPostActions(self, asmptLine, realLine, urlParams):
         """Updates the assumptive line with post-flop actions"""
         streets = ['flop', 'turn', 'river']
         remaining = streets.copy()
@@ -179,7 +189,7 @@ class WizardNash:
                     state = urlParams + asmptLine[street][:-1]
                     for streetx in remaining:
                         urlParams += '&{}_actions='.format(streetx)
-                    stem = '&board={}&cache_change={}'.format(board, self.cacheChange)
+                    stem = '&cache_change=' + self.cacheChange
                     options = self._getOptions(state, stem)
                     if len(options) == 0:
                         return None
@@ -189,6 +199,7 @@ class WizardNash:
                     asmptLine[street] += action['agg'] + '-'
             
             asmptLine[street] = asmptLine[street][:-1]
+            urlParams += asmptLine[street]
 
 
     def _convertHoleCards(self, cards):
@@ -229,17 +240,50 @@ class WizardNash:
         return index
 
 
+    def _getActionDist(self, data, holeCards):
+        """Returns the action distribution for the specified hole cards"""
+        actions = []
+        totFreq = 0
+        index = self._getHandIndex(holeCards)
+
+        for obj in data['solutions']:
+            a = obj['action']
+            freq = obj['strategy'][index]
+            totFreq += freq
+            if a['code'][0] != 'R':
+                actions.append((a['code'], freq))
+            else:
+                #wager, pct = float(a['betsize']), float(a['betsize_by_pot'])
+                pct = float(a['betsize_by_pot'])
+                actions.append(('R', freq, pct))
+        
+        if totFreq == 0:
+            print('Hand not in range')
+            return None
+
+        return actions
+
+
+    def _getGameType(self, depth):
+        if depth == 100:
+            return 'Cash6m{}zComplex'.format(self.rakeStruct)
+        else:
+            return 'Cash6m{}zSimple'.format(self.rakeStruct)
+
+
     def getStrategy(self, line, effStack, holeCards, board):
-        # ?gametype=Cash6m50zComplex&depth=100&stacks=&preflop_actions=R2.5-F-C-C-R15&flop_actions=&turn_actions=&river_actions=&board=&cache_change=2022-02-06T00%3A00Z
-        depth = min(self.depths, key=lambda x: abs(x - effStack))
-        urlParams = "?gametype={}&depth={}&stacks=&preflop_actions=".format(self.gameType, depth)
+        depth = 100
+        #gameType = 'Cash6m{}zGeneral25Open'.format(self.rakeStruct)
+        gameType = 'Cash6m{}zGeneral'.format(self.rakeStruct)
+        #depth = min(self.depths, key=lambda x: abs(x - effStack))
+        #gameType = self._getGameType(depth)
+        urlParams = "?gametype={}&depth={}&stacks=&preflop_actions=".format(gameType, depth)
         asmptLine = {'pre': '', 'flop': '', 'turn': '', 'river': ''}
         asmptLine['pre'] = self.getPreActions(line['pre'], urlParams)
         if not asmptLine['pre']:
             return None, None
         urlParams += asmptLine['pre']
-
-        self.getPostActions(asmptLine, line, urlParams, board)
+        self.getPostActions(asmptLine, line, urlParams)
         state = urlParams
         for street in ['flop', 'turn', 'river']:
             if asmptLine[street] == '':
@@ -251,17 +295,18 @@ class WizardNash:
             "&flop_actions={}&turn_actions={}&river_actions={}&board={}&cache_change={}"
             .format(asmptLine['flop'], asmptLine['turn'], asmptLine['river'], board, self.cacheChange)
         )
+        print(url)
         data = self.sendRequest(url)
         if data is None:
             return None, None
         if state not in self.cache:
             self._saveOptions(data, state)
-        
-        print(state)
-        print()
-        print(asmptLine)
-        print()
-        print(url)
+
+        actions = self._getActionDist(data, holeCards)
+        if actions is None:
+            return None, None
+
+        return actions, asmptLine
 
 
 
@@ -271,22 +316,23 @@ if __name__ == '__main__':
 
     line = {
         'pre': [
-                {'pos': 'LJ', 'agg': 'F'}, {'pos': 'HJ', 'agg': 'R', 'wager': 2.12}, {'pos': 'CO', 'agg': 'F'},
-                {'pos': 'BU', 'agg': 'F'}, {'pos': 'SB', 'agg': 'F'}, {'pos': 'BB', 'agg': 'C'}
+                {'pos': 'LJ', 'agg': 'F'}, {'pos': 'HJ', 'agg': 'F'}, {'pos': 'CO', 'agg': 'F'},
+                {'pos': 'BU', 'agg': 'R', 'wager': 2.12}, {'pos': 'SB', 'agg': 'F'}, {'pos': 'BB', 'agg': 'C'}
             ],
-        'flop': [{'agg': 'B', 'wager': 2.75}],
+        'flop': [{'pos': 'BB', 'agg': 'X'}],
         'turn': [],
         'river': []
     }
     effStack = 112
     holeCards = 'AhJc'
     board = '4dTh2s'
-    #res = wizard.getStrategy(line, effStack, holeCards, board)
+    #strategy, asmptLine = wizard.getStrategy(line, effStack, holeCards, board)
+    #print(strategy)
+    #print()
+    #print(asmptLine)
 
-    res = wizard._getHandIndex('TcTh')
-    print(res)
+    #res = wizard._getHandIndex('TcTh')
+    #print(res)
 
-    #time.sleep(2)
+    time.sleep(2)
     wizard.session.close()
-
-# https://gtowizard.com/api/v1/poker/next-actions/?gametype=CashHu500zSimple&depth=100&stacks=&preflop_actions=R2.5-R10-R24-C&flop_actions=X-X&turn_actions=&river_actions=&cache_change=2022-02-06T00%3A00Z

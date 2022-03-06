@@ -114,6 +114,7 @@ def getOcrNumber(api, img, scaleFactor, binThresh, preprocess=True):
     number = None
     #print(api.GetUTF8Text())
     for result in api.GetUTF8Text().split():
+        result = result.replace('/', '7')
         try:
             number = float(result)
             break
@@ -216,7 +217,7 @@ def getOcrStack(api, pilImg, scaleFactor, binThresh, k=25):
     return getOcrNumber(api, pilImg, scaleFactor, binThresh, preprocess=False)
 
 
-def getOcrBet(api, pilImg, scaleFactor, binThresh, isMainPot=False, B=68, C=240, k=5, m=2, p=37):
+def getOcrBet(api, pilImg, scaleFactor, binThresh, isMainPot=False, B=62, C=240, k=5, m=2, p=37):
     """
     :param isMainPot: True if the image is the total pot, False otherwise
     """
@@ -224,7 +225,7 @@ def getOcrBet(api, pilImg, scaleFactor, binThresh, isMainPot=False, B=68, C=240,
     # which makes the dark-green background white and the rest black
     img = cv2.cvtColor(np.array(pilImg), cv2.COLOR_RGB2BGR)
     mask = cv2.inRange(img, BET_BG_LOWER, BET_BG_UPPER)
-    #cv2.imwrite('../img/test/mask1.png', mask)
+    #cv2.imwrite('../../img/test/mask1.png', mask)
 
     # find the contour of the white portion of the mask
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -247,7 +248,7 @@ def getOcrBet(api, pilImg, scaleFactor, binThresh, isMainPot=False, B=68, C=240,
     # take the grayscale and perform binary thresholding
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     _, mask = cv2.threshold(img, binThresh, 255, cv2.THRESH_BINARY)
-    #cv2.imwrite('../img/test/mask2.png', mask)
+    cv2.imwrite('../../img/test/mask2.png', mask)
 
     # now find the first 'B' and crop it out of the grayscale image
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -270,7 +271,7 @@ def getOcrBet(api, pilImg, scaleFactor, binThresh, isMainPot=False, B=68, C=240,
 
     # pass the result onward to the OCR algorithm
     pilImg = Image.fromarray(mask)
-    #pilImg.save('../img/test/foo.png')
+    pilImg.save('../../img/test/foo.png')
     return getOcrNumber(api, pilImg, scaleFactor, binThresh, preprocess=False)
 
 
@@ -358,19 +359,28 @@ if __name__ == '__main__':
     api = PyTessBaseAPI(path='../../tessdata', psm=PSM.SINGLE_LINE, oem=OEM.LSTM_ONLY)
     #api.SetVariable("tessedit_char_whitelist", "0123456789.JQKA")
 
-    path = '../../img/test/9h.png'
+    path = '../../img/test/mask2.png'
     scaleFactor = 4
     binThresh = 180
 
     #test_containsTemplate('tb1.png', 'playerActive.png')
 
-    #img = Image.open(path)
-    #res = getOcrBet(api, img, scaleFactor, binThresh, isMainPot=False)
+    img = Image.open(path)
+    
+    img = np.array(img)
+    img = scaleImage(img, scaleFactor)
+    img = cv2.blur(img, (5, 5))
+    _, img = cv2.threshold(img, binThresh, 255, cv2.THRESH_BINARY_INV)
+    cv2.imwrite('../../img/test/mask2-inv.png', img)
+    img = Image.fromarray(img)
+
+    res = getOcrBet(api, img, scaleFactor, binThresh, isMainPot=False)
+    #res = getOcrNumber(api, img, scaleFactor, binThresh, preprocess=False)
     #res = getOcrStack(api, img, scaleFactor, binThresh)
     #print(res)
 
-    img = Image.open(path)
-    res = getCard(api, img, scaleFactor, binThresh)
+    #img = Image.open(path)
+    #res = getCard(api, img, scaleFactor, binThresh)
     #res = getOcrCard(api, img)
     print(res)
 
