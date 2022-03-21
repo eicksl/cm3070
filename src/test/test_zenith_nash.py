@@ -2,7 +2,7 @@ import unittest
 from src.bot.zenith_nash import ZenithNash
 
 
-class TestStringMethods(unittest.TestCase):
+class TestZenithNash(unittest.TestCase):
 
     def setUp(self):
         self.zenith = ZenithNash()

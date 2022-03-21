@@ -388,3 +388,7 @@
 [["R22.75", 22.75, 0.35], ["R31.05", 31.05, 0.55], ["RAI", 88.0, 1.92]]
 ?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=F-R2-F-F-F-C&flop_actions=X-R2.25
 [["R6.75", 6.75, 0.5], ["R11.25", 11.25, 1.0], ["RAI", 98.0, 10.64]]
+?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=F-R2-F-F-F-C&flop_actions=X-R2.25-C
+[["R1.8", 1.8, 0.2], ["R4.5", 4.5, 0.5], ["RAI", 95.75, 10.64]]
+?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=F-R2-F-F-F-C&flop_actions=X-R2.25-C&turn_actions=X-X
+[["R2.5", 2.5, 0.28], ["R5.5", 5.5, 0.61], ["R12", 12.0, 1.33], ["R27", 27.0, 3.0], ["RAI", 95.75, 10.64]]

@@ -217,7 +217,7 @@ def getOcrStack(api, pilImg, scaleFactor, binThresh, k=25):
     return getOcrNumber(api, pilImg, scaleFactor, binThresh, preprocess=False)
 
 
-def getOcrBet(api, pilImg, scaleFactor, binThresh, isMainPot=False, B=62, C=240, k=5, m=2, p=37):
+def getOcrBet(api, pilImg, scaleFactor, binThresh, isMainPot=False, B=68, C=240, k=5, m=2, p=37):
     """
     :param isMainPot: True if the image is the total pot, False otherwise
     """
@@ -248,12 +248,13 @@ def getOcrBet(api, pilImg, scaleFactor, binThresh, isMainPot=False, B=62, C=240,
     # take the grayscale and perform binary thresholding
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     _, mask = cv2.threshold(img, binThresh, 255, cv2.THRESH_BINARY)
-    cv2.imwrite('../../img/test/mask2.png', mask)
+    #cv2.imwrite('../../img/test/mask2.png', mask)
 
     # now find the first 'B' and crop it out of the grayscale image
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     rect = None
     for i in range(len(contours)-1, -1, -1):
+        #print(cv2.contourArea(contours[i]))
         if cv2.contourArea(contours[i]) >= B:
             rect = cv2.boundingRect(contours[i])
             break
@@ -262,6 +263,7 @@ def getOcrBet(api, pilImg, scaleFactor, binThresh, isMainPot=False, B=62, C=240,
         # if it is cut in half, for example, the OCR output may be incorrect
         raise Exception("No 'B' found in wager image")
     img = img[:, :rect[0]-m]
+    #cv2.imwrite('../../img/test/gray.png', img)
 
     # scale the image, apply median blurring for noise reduction, and then
     # threshold it to get a black number on a white background
@@ -271,7 +273,7 @@ def getOcrBet(api, pilImg, scaleFactor, binThresh, isMainPot=False, B=62, C=240,
 
     # pass the result onward to the OCR algorithm
     pilImg = Image.fromarray(mask)
-    pilImg.save('../../img/test/foo.png')
+    #pilImg.save('../../img/test/foo.png')
     return getOcrNumber(api, pilImg, scaleFactor, binThresh, preprocess=False)
 
 
@@ -354,12 +356,85 @@ def getOcrBet_old(api, pilImg, scaleFactor, binThresh, B=69, k=2):
     return getOcrNumber(api, pilImg, scaleFactor, binThresh, preprocess=False)
 
 
+def _boardToRanked(cards):
+    """
+    Helper function that converts a list of board cards to their corresponding integer ranks.
+    If the average rank is below 7, then aces will be ranked lowest.
+
+    :param cards: the board cards as a list of chars
+    :returns: the board cards as a list of integers
+    """
+    noAces = []
+    for card in cards:
+        if card != 'A':
+            noAces.append(card)
+    avgRank = sum(CARD_RANKS[x] for x in noAces) / len(cards)
+    toRank = lambda x: 0 if x == 'A' and avgRank < 7 else CARD_RANKS[x]
+    return [toRank(x) for x in cards]
+
+
+def hasFourStraight(boardCards):
+    """
+    Determines whether the board has four to a straight.
+
+    :param boardCards: the board cards as a list of chars
+    :returns: boolean
+    """
+    cards = list(set(boardCards))
+    if len(cards) < 4:
+        return False
+
+    cards = sorted(_boardToRanked(cards), reverse=True)
+
+    if len(cards) == 5:
+        if cards[0] - cards[1] > cards[3] - cards[4]:
+            cards.pop(0)
+        else:
+            cards.pop(4)
+
+    n = 0
+    for i in range(3):
+        diff = cards[i] - cards[i+1]
+        if diff > 2:
+            return False
+        elif diff != 1:
+            n += 1
+
+    if n > 1:
+        return False
+
+    return True
+
+
+def lc_4straight(boardCards):
+    """
+    Determines whether the last card brought four to a straight. Assumes that the board
+    has four to a straight.
+
+    :param boardCards: the board cards as a list of chars
+    :returns: boolean
+    """
+    if len(boardCards) < 5:
+        return True
+
+    cards = _boardToRanked(boardCards)
+    lcRank = cards[-1]
+    cards.sort(reverse=True)
+    if cards[0] - cards[1] > cards[3] - cards[4]:
+        removed = cards.pop(0)
+    else:
+        removed = cards.pop(4)
+    
+    return lcRank != removed
+
+
+
 
 if __name__ == '__main__':
     api = PyTessBaseAPI(path='../../tessdata', psm=PSM.SINGLE_LINE, oem=OEM.LSTM_ONLY)
     #api.SetVariable("tessedit_char_whitelist", "0123456789.JQKA")
 
-    path = '../../img/test/mask2.png'
+    path = '../../img/test/chips2.png'
     scaleFactor = 4
     binThresh = 180
 
@@ -367,14 +442,15 @@ if __name__ == '__main__':
 
     img = Image.open(path)
     
-    img = np.array(img)
-    img = scaleImage(img, scaleFactor)
-    img = cv2.blur(img, (5, 5))
-    _, img = cv2.threshold(img, binThresh, 255, cv2.THRESH_BINARY_INV)
-    cv2.imwrite('../../img/test/mask2-inv.png', img)
-    img = Image.fromarray(img)
+    #img = np.array(img)
+    #img = scaleImage(img, scaleFactor)
+    #img = cv2.blur(img, (5, 5))
+    #_, img = cv2.threshold(img, binThresh, 255, cv2.THRESH_BINARY_INV)
+    #cv2.imwrite('../../img/test/mask2-inv.png', img)
+    #mg = Image.fromarray(img)
 
-    res = getOcrBet(api, img, scaleFactor, binThresh, isMainPot=False)
+    #res = getOcrBet(api, img, scaleFactor, binThresh, isMainPot=False)
+    res = getOcrBet_old(api, img, scaleFactor, binThresh)
     #res = getOcrNumber(api, img, scaleFactor, binThresh, preprocess=False)
     #res = getOcrStack(api, img, scaleFactor, binThresh)
     #print(res)

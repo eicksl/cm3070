@@ -274,11 +274,11 @@ class StateManager:
 
             # if the player is active and it is not a situation where Hero acted and then a villain
             # quickly bet or raised on the same steet, then break
-            #print(pn == self.pnLastActive and self.street == self.lastStreet and self.pot != self.lastPot)
+            #print(pn == self.pnLastActive, self.street == self.lastStreet, self.pot != self.lastPot)
             if pn == self.pnActive and not (
                 pn == self.pnLastActive and self.street == self.lastStreet and self.pot != self.lastPot
             ):
-                #print('A')
+                print('A')
                 break
             
             if pn not in self.playersInHand:
@@ -293,10 +293,10 @@ class StateManager:
                     self.addAction(pn, 'X', 0)
                     continue
                 else:
-                    #print('B')
+                    print('B')
                     break
             elif wager < 1 or pn == self.lastWager['pn'] and wager == self.lastWager['amt']:
-                #print('C')
+                print('C')
                 break
 
             #print(wager)
@@ -310,7 +310,6 @@ class StateManager:
         if self.pnActive == 0:
             self.handleHeroDecision()
             self.actionsAtHeroUpdate = self.numActions
-            #self.handleHeroDecision()
 
         self.pnLastActive = self.pnActive
         self.lastPot = self.pot
@@ -326,38 +325,16 @@ class StateManager:
         :param playersInHand: a pn-to-pos dict of the current players in the hand
         :param playersToCheck: the list of player numbers returned by getPlayersToCheck
 
-        NOTE: here self.playersInHand and self.street are expected to have not yet been updated
-        for the current timestep
+        NOTE: Here self.playersInHand and self.street are expected to have not yet been updated
+        for the current timestep.
         """
-        # Situation 1: Hero called on last street (Hero is pnLastActive)
-        # Solution 1:
-        # Sitation 2: Villain snap-called on last street after Hero raised (Hero was pnLastActive)
-        # Solution 2:
-        # Situation 3: Villain snap-called after another villain called (Hero was not pnLastActive)
-        # Solution 3:
-        # * no one but Hero could have raised since Hero would've been given a turn to act
-
-        # NOTE: new idea... I will assume that either one unseen call happened OR
-        # one unseen raise and then one unseen call...
-        # look at the player in the last position for the prior street who is now still in the hand...
-        #
-        # if we can add THElastWager - HISamountInvestedOnPriorStreet to self.unrakedPot and
-        # have it be >= rakedPot, then we can assume that he called
-        #
-        # if this condition is not met, assume the pnLastActive raised and then this player called
-        #
-        # how can we know how much was called or raised/called?
-        # case call: set it equal to [max(rakedPot - RAKE_CAP, rakedPot / (1 - RAKE)) - self.unrakedPot]
-        # case r/c:
+        time.sleep(0.5)  # the pot text has a fade-in effect, so ensure that it is fully visible
         rakedPot = self.reader.getPot(street=True)
         if rakedPot is None:
-            print('Cannot read raked pot... Sleeping...')
-            time.sleep(5)
-            rakedPot = self.reader.getPot(street=True)
+            raise Exception('Cannot read raked pot')
 
         # handle cases where the remaining players checked or folded
         if self.unrakedPot >= rakedPot:
-            print('TEST: ', self.unrakedPot, rakedPot)
             for pn in playersToCheck:
                 if pn in playersInHand:
                     if len(self.playerHistory[self.pn_to_pos[pn]]['actions'][self.street]) == 0:
@@ -463,9 +440,8 @@ class StateManager:
         if self.actionsAtHeroUpdate == self.numActions:
             return
         
-        self.printState()
+        #self.printState()
         print('\nhandleHeroDecision')
-        return
 
         if not self.effStack and len(self.playersInHand) == 2:
             self.updateEffStack()
@@ -475,9 +451,9 @@ class StateManager:
             strategy, self.asmptLine = self.zenith.getStrategy(
                 self.line['pre'], effStack, self.holeCards, self.pn_to_pos[0]
             )
+        elif not self.sawFlopHeadsUp:
+            return
         else:
-            if not self.sawFlopHeadsUp:
-                return
             strategy, self.asmptLine = self.wizard.getStrategy(
                 self.line, effStack, self.holeCards, self.board
             )
@@ -570,15 +546,3 @@ if __name__ == '__main__':
     #stateManager.recordStates()
     #stateManager.run()
     stateManager.test_run()
-    """
-    stateManager.playersInHand = {
-        0: 'BU', 3: 'LJ', 4: 'HJ', 5: 'CO', 1: 'SB', 2: 'BB'
-    }
-    stateManager.pn_to_pos = stateManager.playersInHand.copy()
-    stateManager.pos_to_pn = {stateManager.pn_to_pos[k] : k for k in stateManager.pn_to_pos}
-    stateManager.pnLastActive = 2
-    stateManager.pnActive = 3
-    stateManager.lastWager['pn'] = 2
-    res = stateManager.getPlayersToCheck()
-    print(res)
-    """

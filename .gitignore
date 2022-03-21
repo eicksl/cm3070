@@ -25,6 +25,8 @@ sheet_not_found.png
 /config/zenith-tokens.json
 /config/zenith-cookies.txt
 /config/zenith-login-cookies.txt
+/data/*
+*.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
