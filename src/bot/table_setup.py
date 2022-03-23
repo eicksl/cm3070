@@ -5,7 +5,7 @@ import win32gui, win32ui
 from win32api import GetSystemMetrics, RGB
 from pynput import mouse
 from PIL import ImageGrab
-from src.bot.globals import CONFIG_DIR, IMAGE_DIR
+from src.bot.constants import CONFIG_DIR, IMAGE_DIR
 
 
 class TableSetup:

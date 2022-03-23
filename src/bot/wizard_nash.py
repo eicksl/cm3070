@@ -271,7 +271,7 @@ class WizardNash:
             return 'Cash6m{}zSimple'.format(self.rakeStruct)
 
 
-    def getStrategy(self, line, effStack, holeCards, board):
+    def getStrategy(self, line, holeCards, board):
         depth = 100
         #gameType = 'Cash6m{}zGeneral25Open'.format(self.rakeStruct)
         gameType = 'Cash6m{}zGeneral'.format(self.rakeStruct)

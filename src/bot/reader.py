@@ -3,7 +3,7 @@ import numpy as np
 from tesserocr import PyTessBaseAPI, PSM, OEM
 from PIL import Image, ImageGrab
 from src.bot.util import (
-    getCard, getOcrBet, containsTemplate, getCardSuit, getOcrStack, villainHasCards
+    getCard, getOcrBet, getOcrBet_old, containsTemplate, getCardSuit, getOcrStack, villainHasCards
 )
 from src.bot.constants import CONFIG_DIR, IMAGE_DIR, TESSDATA_DIR
 
@@ -162,7 +162,10 @@ class Reader:
     def getWager(self, pn):
         bbox = self.areas[self.table]['bets'][pn]
         img = self.getPilImage(bbox)
-        return getOcrBet(self.api, img, self.scaleFactor, self.binThresh)
+        if pn == 3:
+            return getOcrBet_old(self.api, img, self.scaleFactor, self.binThresh)
+        else:
+            return getOcrBet(self.api, img, self.scaleFactor, self.binThresh)
 
 
     def getPot(self, street=False):
@@ -184,7 +187,7 @@ class Reader:
             img = self.getPilImage(bbox)
             stacks[pn] = getOcrStack(self.api, img, self.scaleFactor, self.binThresh)
             if stacks[pn] is None:
-                return None
+                stacks[pn] = 0
         return stacks
 
 

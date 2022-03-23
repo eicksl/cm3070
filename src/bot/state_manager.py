@@ -1,10 +1,12 @@
 import os
 import time
 import json
+import keyboard
 from random import SystemRandom
 from src.bot.reader import Reader
 from src.bot.zenith_nash import ZenithNash
 from src.bot.wizard_nash import WizardNash
+from src.bot.decision import Decision
 from src.bot.constants import (
     POS_RANKS_LIST_PRE, POS_RANKS_DICT_PRE, POS_RANKS_LIST_PRE,
     POS_RANKS_DICT, RAKE, RAKE_CAP, IMAGE_DIR
@@ -40,27 +42,30 @@ class StateManager:
         # performing that action
         self.line = {'pre': [], 'flop': [], 'turn': [], 'river': []}  # represents the state
         self.asmptLine = self.line.copy()
-        self.playerHistory = {}  # player-specific lines and investment per street
+        self.history = {}  # player-specific lines and investment per street
         self.pnLastActive = None  # active player from the last update
         self.pnActive = None  # currently active player
-        self.numActions = 0
         # numActions is the number of actions taken in the hand when Hero first became active,
         # used to prevent multiple calls to decision methods for the same node
+        self.numActions = 0
         self.actionsAtHeroUpdate = None
         self.lastWager = {'pn': None, 'amt': None}  # pn and amount, reset every street
+        self.lastAgg = None  # last aggressor (pn), only reset after each hand
+        self.numAggCS = 0  # number of bets and raises, reset every street
 
 
     def resetPlayerHistory(self):
         for pos in POS_RANKS_LIST_PRE:
-            self.playerHistory[pos] = {
+            self.history[pos] = {
                 'actions': {'pre': [], 'flop': [], 'turn': [], 'river': []},
                 'invested': {'pre': 0, 'flop': 0, 'turn': 0, 'river': 0},
-                'totalInv': 0
+                'totalInv': 0,
+                'r': 1, 'c': 1  # used for aggression factor
             }
-        self.playerHistory['SB']['invested']['pre'] = 0.5
-        self.playerHistory['SB']['totalInv'] = 0.5
-        self.playerHistory['BB']['invested']['pre'] = 1.0
-        self.playerHistory['BB']['totalInv'] = 1.0
+        self.history['SB']['invested']['pre'] = 0.5
+        self.history['SB']['totalInv'] = 0.5
+        self.history['BB']['invested']['pre'] = 1.0
+        self.history['BB']['totalInv'] = 1.0
 
 
     def printState(self):
@@ -85,9 +90,20 @@ class StateManager:
         print('\nUnraked pot: ' + str(self.unrakedPot))
         if self.verbose:
             print('\nLine: ' + json.dumps(self.line, indent=4))
-            print('\nHistory: ' + json.dumps(self.playerHistory, indent=4))
+            print('\nHistory: ' + json.dumps(self.history, indent=4))
         print('\nLine string: ' + _getLineString())
         print('\n\n\n')
+
+
+    def getNextPlayer(self, pn):
+        """Finds the pn of the next player to act"""
+        num = -1
+        for i in range(1, 6):
+            nextPlayer = (pn + i) % 6
+            if nextPlayer in self.playersInHand:
+                num = nextPlayer
+                break
+        return num
 
 
     def getPlayersToCheck(self, beginStreet=False):
@@ -102,15 +118,6 @@ class StateManager:
         begin with the next highest player in position rank who is still
         in the dictionary.
         """
-        def _getNextPlayer(pn):
-            num = -1
-            for i in range(1, 6):
-                nextPlayer = (pn + i) % 6
-                if nextPlayer in self.playersInHand:
-                    num = nextPlayer
-                    break
-            return num
-
         players = list(self.playersInHand.keys())
 
         if self.street == 'pre':
@@ -134,7 +141,7 @@ class StateManager:
                 lap = first_pn
             else:
                 #print('B')
-                lap =_getNextPlayer(first_pn)
+                lap = self.getNextPlayer(first_pn)
         else:
             if self.pnLastActive in self.playersInHand:
                 #print('C')
@@ -142,7 +149,7 @@ class StateManager:
             else:
                 # set it to the closest next-acting player that is still in the hand
                 #print('D')
-                lap = _getNextPlayer(self.pnLastActive)
+                lap = self.getNextPlayer(self.pnLastActive)
 
         #print('lap: ' + str(lap))
         lapInd = players.index(lap)
@@ -151,23 +158,23 @@ class StateManager:
         return players[lapInd:] + players[:lapInd]
 
 
-    def updateEffStack(self):
-        """Updates the effective stack size when heads up"""
+    def updateEffStack(self, stacks):
+        """Updates the absolute effective stack size when heads up"""
         if len(self.playersInHand) > 2:
             return
-        stacks = self.reader.getStacks(self.playersInHand)
-        if stacks is None:
-            print('Could not read stack size. Assuming 100bb effective.')
-            return
+        startStacks = []
         for pn in stacks:
-            stacks[pn] += self.playerHistory[self.pn_to_pos[pn]]['totalInv']
-        self.effStack = min(stacks.values())
+            if stacks[pn] == 0:
+                print('Stack size of 0 found. Assuming 100bb effective.')
+                return
+            startStacks.append(stacks[pn] + self.history[self.pn_to_pos[pn]]['totalInv'])
+        self.effStack = min(startStacks)
 
 
     def addAction(self, pn, agg, wager):
         """Appends an action to the line and updates the player history"""
         pos = self.pn_to_pos[pn]
-        history = self.playerHistory[pos]
+        history = self.history[pos]
         pctPot = 0
 
         # the following will be used to convert between pct of pot and BB raise sizes
@@ -190,9 +197,15 @@ class StateManager:
             history['invested'][self.street] += amount
             history['totalInv'] += amount
             if agg != 'C':
+                history['r'] += 1
+                self.lastAgg = pn
+                self.numAggCS += 1
                 if self.street == 'pre':
                     self.pfRaises += 1
                 self.lastWager.update({'pn': pn, 'amt': wager})
+        
+        if agg in ['X', 'C']:
+            history['c'] += 1
         
         action = {'pos': pos, 'agg': agg, 'wager': wager, 'pctPot': pctPot}
         #action = [pos, agg, pctPot, wager]
@@ -221,23 +234,22 @@ class StateManager:
         self.unrakedPot = 1.5
         self.pfRaises = 0
         self.numActions = 0
+        self.numAggCS = 0
         self.actionsAtHeroUpdate = None
         self.holeCards = holeCards
         self.playersInHand = self.pn_to_pos.copy()
         self.lastWager.update({'pn': self.pos_to_pn['BB'], 'amt': 1})
         self.pnLastActive = self.pos_to_pn['LJ']  # NOTE: first player to act pre is not necessarily LJ
-        #self.pnLastActive = self.pos_to_pn['BB']
+        self.lastAgg = self.pos_to_pn['BB']
 
 
     def updateState(self):
         holeCards = self.reader.getHoleCards()
         if not holeCards:  # Hero not in hand
+            self.holeCards = ''
             return
-        #pos_to_pn, pn_to_pos = self.reader.getPositions()
-        elif holeCards != self.holeCards:  # or pn_to_pos[0] != self.pn_to_pos[0]:
+        elif not self.holeCards:
             self.initializeState(holeCards)
-            if not self.pos_to_pn:  # no button found
-                return
 
         playersInHand = self.reader.getplayersInHand(self.playersInHand)
         self.pnActive = self.reader.getActivePlayer(playersInHand)
@@ -251,6 +263,7 @@ class StateManager:
         street, self.board = self.reader.getStreetAndBoard(self.street, self.board)
         updated = False
         if street != self.street:
+            self.numAggCS = 0
             self.updateLastStreetActions(playersInHand, playersToCheck)
             updated = True
             if self.street == 'pre' and len(playersInHand) == 2:
@@ -270,7 +283,7 @@ class StateManager:
         self.pot = self.reader.getPot()
 
         for pn in playersToCheck:
-            history = self.playerHistory[self.pn_to_pos[pn]]
+            history = self.history[self.pn_to_pos[pn]]
 
             # if the player is active and it is not a situation where Hero acted and then a villain
             # quickly bet or raised on the same steet, then break
@@ -278,7 +291,6 @@ class StateManager:
             if pn == self.pnActive and not (
                 pn == self.pnLastActive and self.street == self.lastStreet and self.pot != self.lastPot
             ):
-                print('A')
                 break
             
             if pn not in self.playersInHand:
@@ -293,10 +305,8 @@ class StateManager:
                     self.addAction(pn, 'X', 0)
                     continue
                 else:
-                    print('B')
                     break
             elif wager < 1 or pn == self.lastWager['pn'] and wager == self.lastWager['amt']:
-                print('C')
                 break
 
             #print(wager)
@@ -328,7 +338,7 @@ class StateManager:
         NOTE: Here self.playersInHand and self.street are expected to have not yet been updated
         for the current timestep.
         """
-        time.sleep(0.5)  # the pot text has a fade-in effect, so ensure that it is fully visible
+        time.sleep(1)  # the pot text has a fade-in effect, so ensure that it is fully visible
         rakedPot = self.reader.getPot(street=True)
         if rakedPot is None:
             raise Exception('Cannot read raked pot')
@@ -337,7 +347,7 @@ class StateManager:
         if self.unrakedPot >= rakedPot:
             for pn in playersToCheck:
                 if pn in playersInHand:
-                    if len(self.playerHistory[self.pn_to_pos[pn]]['actions'][self.street]) == 0:
+                    if len(self.history[self.pn_to_pos[pn]]['actions'][self.street]) == 0:
                         self.addAction(pn, 'X', 0)
                 else:
                     self.addAction(pn, 'F', 0)
@@ -363,7 +373,7 @@ class StateManager:
         total = self.unrakedPot
         if self.lastWager['amt'] is not None:
             for pn in remaining:
-                inv = self.playerHistory[self.pn_to_pos[pn]]['invested'][self.street]
+                inv = self.history[self.pn_to_pos[pn]]['invested'][self.street]
                 total += self.lastWager['amt'] - inv
         # if, by adding to the prior-street investments of the remaining players to match
         # the prior-street last wager, we can equal or exceed the raked pot, then we can
@@ -372,7 +382,7 @@ class StateManager:
         if total >= rakedPot:
             for pn in remaining:
                 #if pn == self.lastWager['pn']:
-                inv = self.playerHistory[self.pn_to_pos[pn]]['invested'][self.street]
+                inv = self.history[self.pn_to_pos[pn]]['invested'][self.street]
                 if inv == self.lastWager['amt']:
                     break
                 actions[pn] = (pn, 'C', self.lastWager['amt'])
@@ -390,7 +400,7 @@ class StateManager:
             # inv_st is the total investments of all remaining players for the last street
             inv_st = 0
             for pn in remaining:
-                inv_st += self.playerHistory[self.pn_to_pos[pn]]['invested'][self.street]
+                inv_st += self.history[self.pn_to_pos[pn]]['invested'][self.street]
 
             # calculate raise amount and update actions
             wager = round((unrakedEst - self.unrakedPot + inv_st) / len(remaining), 2)
@@ -412,7 +422,7 @@ class StateManager:
             if agg == 'B':
                 wager = pctPot * self.unrakedPot
             else:
-                heroInv = self.playerHistory[self.pn_to_pos[0]]['invested'][self.street]
+                heroInv = self.history[self.pn_to_pos[0]]['invested'][self.street]
                 potAfterCall = self.unrakedPot + (self.lastWager['amt'] - heroInv)
                 wager = pctPot * potAfterCall + self.lastWager['amt']
             return round(wager, 2)
@@ -440,11 +450,16 @@ class StateManager:
         if self.actionsAtHeroUpdate == self.numActions:
             return
         
-        #self.printState()
+        self.printState()
         print('\nhandleHeroDecision')
 
+        self.stacks = self.reader.getStacks(self.playersInHand)
+        if self.street != 'pre':
+            Decision.make(self)
+        return
+
         if not self.effStack and len(self.playersInHand) == 2:
-            self.updateEffStack()
+            self.updateEffStack(stacks)
         effStack = 100 if not self.effStack else self.effStack
 
         if self.street == 'pre':
@@ -455,7 +470,7 @@ class StateManager:
             return
         else:
             strategy, self.asmptLine = self.wizard.getStrategy(
-                self.line, effStack, self.holeCards, self.board
+                self.line, self.holeCards, self.board
             )
 
         if strategy is None:
@@ -515,6 +530,7 @@ class StateManager:
         minFileNum = nums[0]
         #minFileNum = int(files[0].split('.')[0])
         self.reader.debugState = minFileNum
+        print('\nPress F9 to step through the debug states\n')
         for i in range(minFileNum, minFileNum + len(files)):
             keyboard.wait('f9')
             start = time.time()
@@ -540,9 +556,8 @@ class StateManager:
 
 
 if __name__ == '__main__':
-    import keyboard
     keyboard.add_hotkey('esc', lambda: os.system('taskkill /im winpty-agent.exe'))
     stateManager = StateManager(1, debug=True)
     #stateManager.recordStates()
-    #stateManager.run()
-    stateManager.test_run()
+    stateManager.run()
+    #stateManager.test_run()

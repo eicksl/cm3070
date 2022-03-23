@@ -1,6 +1,6 @@
 import os, keyboard
-from table_setup import TableSetup
-from state_manager import StateManager
+from src.bot.table_setup import TableSetup
+from src.bot.state_manager import StateManager
 
 
 def printMainMenu():
@@ -24,7 +24,7 @@ def run():
             print()
             exit(0)
         elif num == 1:
-            StateManager(1).test_run()
+            StateManager(1, debug=True).run()
         elif num == 2:
             TableSetup().run()
         else:
@@ -34,4 +34,6 @@ def run():
 
 if __name__ == '__main__':
     keyboard.add_hotkey('esc', lambda: os.system('taskkill /im winpty-agent.exe'))
-    run()
+    sm = StateManager(1, debug=True)
+    sm.run()
+    #sm.test_run()
