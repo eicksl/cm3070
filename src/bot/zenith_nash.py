@@ -164,7 +164,7 @@ class ZenithNash:
 
 
     def _getMinPct(self, pos):
-        # MIN RAISE: 2X THE LAST WAGER MINUS CURRENT INVESTMENT OF MIN-RAISER BEFORE THE MIN-RAISE
+        # min raise: 2x the last wager minus current investment of min-raiser before the min-raise
         invBeforeRaise = self.inv[pos]
         minWager = 2 * self.lastWager - invBeforeRaise
         potAfterCall = self.pot + (self.lastWager - invBeforeRaise)

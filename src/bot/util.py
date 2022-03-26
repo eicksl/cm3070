@@ -428,6 +428,23 @@ def lc_4straight(boardCards):
     return lcRank != removed
 
 
+def mapRange(x, x0, x1, y0, y1):
+    """
+    For an input x in range [x0, x1], use linear interpolation to map x
+    to some y in the range [y0, y1].
+    """
+    return (x - x0) * (y1 - y0) / (x1 - x0) + y0
+
+
+def quadInterp(x, x0, y0, x1, y1, x2, y2):
+    """
+    Quadratic interpolation using the mid-way point (x1, y1).
+    """
+    g0 = (x - x1) * (x - x2) / (x0 - x1) * (x0 - x2)
+    g1 = (x - x0) * (x - x2) / (x1 - x0) * (x1 - x2)
+    g2 = (x - x0) * (x - x1) / (x2 - x0) * (x2 - x1)
+    return y0 * g0 + y1 * g1 + y2 * g2
+
 
 
 if __name__ == '__main__':

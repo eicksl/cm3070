@@ -60,7 +60,7 @@ class StateManager:
                 'actions': {'pre': [], 'flop': [], 'turn': [], 'river': []},
                 'invested': {'pre': 0, 'flop': 0, 'turn': 0, 'river': 0},
                 'totalInv': 0,
-                'r': 1, 'c': 1  # used for aggression factor
+                'r': 1, 'c': 1  # used for the aggression factor
             }
         self.history['SB']['invested']['pre'] = 0.5
         self.history['SB']['totalInv'] = 0.5
@@ -203,6 +203,8 @@ class StateManager:
                 if self.street == 'pre':
                     self.pfRaises += 1
                 self.lastWager.update({'pn': pn, 'amt': wager})
+            elif self.unrakedPot <= 2.5:  # player open-limped
+                self.lastAgg = pn
         
         if agg in ['X', 'C']:
             history['c'] += 1
@@ -261,6 +263,8 @@ class StateManager:
         print(playersToCheck)
 
         street, self.board = self.reader.getStreetAndBoard(self.street, self.board)
+        self.pot = self.reader.getPot()
+
         updated = False
         if street != self.street:
             self.numAggCS = 0
@@ -280,7 +284,7 @@ class StateManager:
             print(playersToCheck)
         
         #if street != 'pre':
-        self.pot = self.reader.getPot()
+        #self.pot = self.reader.getPot()
 
         for pn in playersToCheck:
             history = self.history[self.pn_to_pos[pn]]
@@ -341,7 +345,9 @@ class StateManager:
         time.sleep(1)  # the pot text has a fade-in effect, so ensure that it is fully visible
         rakedPot = self.reader.getPot(street=True)
         if rakedPot is None:
-            raise Exception('Cannot read raked pot')
+            #raise Exception('Cannot read street pot')
+            print('Cannot read street pot. Using total raked pot instead.')
+            rakedPot = self.pot
 
         # handle cases where the remaining players checked or folded
         if self.unrakedPot >= rakedPot:
@@ -416,23 +422,25 @@ class StateManager:
                 self.addAction(*actions[pn])
 
 
-    def handleHeroDecision(self):
+    def pctToWager(self, agg, pctPot):
+        if agg == 'B':
+            wager = pctPot * self.unrakedPot
+        else:
+            heroInv = self.history[self.pn_to_pos[0]]['invested'][self.street]
+            potAfterCall = self.unrakedPot + (self.lastWager['amt'] - heroInv)
+            wager = pctPot * potAfterCall + self.lastWager['amt']
+        return wager
 
-        def _pctToWager(agg, pctPot):
-            if agg == 'B':
-                wager = pctPot * self.unrakedPot
-            else:
-                heroInv = self.history[self.pn_to_pos[0]]['invested'][self.street]
-                potAfterCall = self.unrakedPot + (self.lastWager['amt'] - heroInv)
-                wager = pctPot * potAfterCall + self.lastWager['amt']
-            return round(wager, 2)
+
+    def handleHeroDecision(self):
 
         def _getPreDecisionString(decision, effStack):
             agg = decision[0]
             string = {'f': 'Fold', 'c': 'Call', 'r': 'Raise', 'j': 'All-in'}[agg]
             if agg == 'r':
                 pct = decision[2]
-                string += ' {}% ({} BB)'.format(round(pct * 100), _pctToWager('R', pct))
+                wager = round(self.pctToWager('R', pct), 2)
+                string += ' {}% ({} BB)'.format(round(pct * 100), wager)
             elif agg == 'j':
                 string += ' ({} BB)'.format(effStack)
             return string
@@ -444,7 +452,8 @@ class StateManager:
             string = {'F': 'Fold', 'X': 'Check', 'C': 'Call', 'B': 'Bet', 'R': 'Raise'}[agg]
             if agg in ['B', 'R']:
                 pct = decision[2]
-                string += ' {}% ({} BB)'.format(round(pct * 100), _pctToWager(agg, pct))
+                wager = self.pctToWager(agg, pct)
+                string += ' {}% ({} BB)'.format(round(pct * 100), wager)
             return string
 
         if self.actionsAtHeroUpdate == self.numActions:
@@ -455,7 +464,8 @@ class StateManager:
 
         self.stacks = self.reader.getStacks(self.playersInHand)
         if self.street != 'pre':
-            Decision.make(self)
+            x = Decision.make(self)
+            print(x)
         return
 
         if not self.effStack and len(self.playersInHand) == 2:

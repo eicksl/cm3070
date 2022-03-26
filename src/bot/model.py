@@ -1,20 +1,11 @@
 import numpy as np
-from copy import deepcopy
 from keras.models import load_model
 from src.bot.util import hasFourStraight, lc_4straight
 from src.bot.constants import MODEL_DIR, CARD_RANKS, POS_RANKS_DICT
+from src.bot.state import State
 
 
 class Model:
-
-    class State:
-        """Copies select info from the StateManager object"""
-        def __init__(self, state):
-            self.unrakedPot = state.unrakedPot
-            self.playersInHand = state.playersInHand.copy()
-            self.pn_to_pos = state.pn_to_pos.copy()
-            self.history = deepcopy(state.history)
-            self.lastAgg = state.lastAgg
 
     model = load_model(MODEL_DIR)
 
@@ -29,18 +20,109 @@ class Model:
     # indices of input array to normalize
     minmax = [0, 1, 2, 16, 17]
     unbounded = [10, 11, 12, 14]
-    #boolean = [3, 4, 5, 6, 7, 8, 9, 13]
 
     # maps indices to (min, max) tuples for min-max normalization
     minmaxMap = {0: (1, 3), 1: (1, 13), 2: (1, 13), 16: (2, 6), 17: (1/6, 1)}
 
     @staticmethod
-    def getPrediction(features: dict) -> np.ndarray:
-        fa = np.zeros((1, len(Model.indToFeature)), dtype=np.float32)  # feature array
-        for i in range(fa.size):
-            fa[0][i] = features[Model.indToFeature[i]]
-        Model.normalize(fa)
+    def pred(state, agg: str, pct: float=0) -> np.ndarray:
+        """
+        Given a state and an action, predict the probability distribution for the next
+        opponent to act assuming that the action is taken by the currently active player.
+        If a StateManager object is passed, relevant info will be copied so as not to
+        modify the original state.
+
+        :param state: a State or StateManager instance
+        :param agg: action code in the set {'F', 'X', 'C', 'B', 'R'}
+        :param pct: a percentage of pot specified for bet or raise actions
+        """
+        if not isinstance(state, State):
+            state = State(state)
+
+        pn = state.pnActive
+        match agg:
+            case 'F':
+                del state.playersInHand[pn]
+            case 'X':
+                state.actions[pn]['c'] += 1
+            case 'C':
+                callAmt = min(state.stacks[pn], state.lastWager['amt'] - state.inv[pn])
+                state.pot += callAmt
+                state.stacks[pn] -= callAmt
+                state.inv[pn] += callAmt
+                state.actions[pn]['c'] += 1
+            case 'B':
+                betAmt = pct * state.pot
+                if betAmt > state.stacks[pn]:
+                    raise Exception("Bet amount cannot exceed the player's stack size")
+                state.pot += betAmt
+                state.stacks[pn] -= betAmt
+                state.inv[pn] += betAmt
+                state.lastWager.update({'pn': pn, 'amt': betAmt})
+                state.lastAgg = pn
+                state.actions[pn]['r'] += 1
+                state.numAggCS += 1
+            case 'R':
+                callAmt = state.lastWager['amt'] - state.inv[pn]
+                potAfterCall = state.pot + callAmt
+                raiseAmt = pct * potAfterCall
+                totAmt = callAmt + raiseAmt
+                if totAmt > state.stacks[pn]:
+                    raise Exception("Raise amount cannot exceed the player's stack size")
+                state.pot += totAmt
+                state.stacks[pn] -= totAmt
+                state.inv[pn] += totAmt
+                wager = state.lastWager['amt'] + raiseAmt
+                state.lastWager.update({'pn': pn, 'amt': wager})
+                state.lastAgg = pn
+                state.actions[pn]['r'] += 1
+                state.numAggCS += 1
+            case _:
+                raise Exception('Invalid action code')
+
+        state.pnActive = state.getNextPlayer(pn)
+        fa = Model.getFeatureArray(state)
+
         return Model.model.predict(fa)[0]
+
+
+    @staticmethod
+    def predAllFold(state, agg: str, pct: float) -> float:
+        """
+        Given a state and a bet or raise action, predict the probability of all
+        remaining opponents folding.
+        """
+        if not isinstance(state, State):
+            state = State(state)
+
+        fold = Model.pred(state, agg, pct)[0]
+        if len(state.playersInHand) == 2:
+            return fold
+        while len(state.playersInHand) > 2:
+            fold *= Model.pred(state, 'F')[0]
+
+        return fold
+
+
+    @staticmethod
+    def predAllCheck(state) -> float:
+        """
+        Given a state, predict the probability of all remaining opponents checking
+        after the currently active player checks.
+        """
+        if not isinstance(state, State):
+            state = State(state)
+
+        posRank = lambda pn: POS_RANKS_DICT[state.pn_to_pos[pn]]
+        pnLast = sorted(state.playersInHand.keys(), key=posRank)[-1]
+
+        check = Model.pred(state, 'X')[1]
+        if state.pnActive == pnLast:
+            return check
+        while state.pnActive != pnLast:
+            check *= Model.pred(state, 'X')[1]
+
+        return check
     
 
     @staticmethod
@@ -54,8 +136,12 @@ class Model:
 
 
     @staticmethod
-    def getFeatures(state) -> dict:
-        pos = state.pn_to_pos[state.pnActive]
+    def getFeatureArray(state: State) -> np.ndarray:
+        """
+        Converts the state object to a normalized array of features that can be
+        understood by the opponent model.
+        """
+        pn = state.pnActive
         boardCards = []
         boardSuits = []
         for i in range(0, len(state.board), 2):
@@ -68,7 +154,7 @@ class Model:
         lcDominantSuit = boardSuits[-1] == max(set(boardSuits), key=boardSuits.count)
         flushPossible = len(boardSuits) - len(set(boardSuits)) >= 2
 
-        return {
+        features = {
             'street': ['pre', 'flop', 'turn', 'river'].index(state.street),
             'highCard': highCard,
             'avgRank': sum(cardRanks) / len(cardRanks),
@@ -79,19 +165,26 @@ class Model:
             'lc4flush': has4flush and lcDominantSuit,
             'lc4straight': has4straight and lc_4straight(boardCards),
             'lcOvercard': highCard == cardRanks[-1],
-            'plAgg': state.history[pos]['r'] / state.history[pos]['c'],
-            'opAgg': Model.getOpponentAgg(state.pnActive, state),
+            'plAgg': state.actions[pn]['r'] / state.actions[pn]['c'],
+            'opAgg': Model.getOpponentAgg(state),
             'numAggCS': state.numAggCS,
-            'isLastAgg': state.pnActive == state.lastAgg,
-            'spr': Model.spr(state.pnActive, state),
-            'amtToCall': Model.getAmtToCall(state.pnActive, state),
+            'isLastAgg': pn == state.lastAgg,
+            'spr': Model.spr(state),
+            'amtToCall': Model.getAmtToCall(state),
             'numPlayers': len(state.playersInHand),
-            'relPos': Model.getRelPos(state.pnActive, state)
+            'relPos': Model.getRelPos(state)
         }
+
+        fa = np.zeros((1, len(Model.indToFeature)), dtype=np.float32)  # feature array
+        for i in range(fa.size):
+            fa[0][i] = features[Model.indToFeature[i]]
+        Model.normalize(fa)
+
+        return fa
 
     
     @staticmethod
-    def getOpponentAgg(pn: int, state) -> float:
+    def getOpponentAgg(state: State) -> float:
         """
         Finds the aggression factor for the opponent(s). If there are more than two players in
         the hand, the last aggressor's AF is used unless the player is the last aggressor - in
@@ -102,79 +195,79 @@ class Model:
         :param state: the relevant state
         :returns: the AF as a float
         """
+        pn = state.pnActive
         if pn != state.lastAgg:
-            pos = state.pn_to_pos[state.lastAgg]
-            return state.history[pos]['r'] / state.history[pos]['c']
+            return state.actions[pn]['r'] / state.actions[pn]['c']
         
         afTotal = 0
         for player in state.playersInHand:
             if player != pn:
-                pos = state.pn_to_pos[player]
-                afTotal += state.history[pos]['r'] / state.history[pos]['c']
+                afTotal += state.actions[pn]['r'] / state.actions[pn]['c']
         
         return afTotal / (len(state.playersInHand) - 1)
 
 
     @staticmethod
-    def getEffPot(pn: int, state) -> float:
+    def getEffPot(state: State) -> float:
         """Calculates the effective pot size"""
-        pos = state.pn_to_pos[pn]
+        pn = state.pnActive
         lastWager = 0 if state.lastWager['amt'] is None else state.lastWager['amt']
-        diff = lastWager - state.history[pos]['invested'][state.street]
+        diff = lastWager - state.inv[pn]
         if state.numAggCS == 0 or diff <= state.stacks[pn]:
-            return state.unrakedPot
+            return state.pot
 
-        pot = state.unrakedPot
-        streetStack = state.stacks[pn] + state.history[pos]['invested'][state.street]
-        for key in state.history:
-            if key != pos and state.history[key]['invested'][state.street] > streetStack:
-                pot -= state.history[key]['invested'][state.street] - streetStack
+        pot = state.pot
+        streetStack = state.stacks[pn] + state.inv[pn]
+        for key in state.inv:
+            if key != pn and state.inv[key] > streetStack:
+                pot -= state.inv[key] - streetStack
 
         return pot
 
 
     @staticmethod
-    def spr(pn: int, state) -> float:
+    def spr(state: State) -> float:
         """
         Returns the effective stack-to-pot ratio. If multiway, the last aggressor's stack is
         used to determine the effective stack; however, if the player is the last aggressor,
         the average opponent stack is used.
         """
-        pot = Model.getEffPot(pn, state)
+        pn = state.pnActive
+        pot = Model.getEffPot(state)
         if pn != state.lastAgg:
             return min(state.stacks[pn], state.stacks[state.lastAgg]) / pot
 
-        numOpponents = len(state.playersInHand) - 1
         stacksTotal = 0
         for player in state.playersInHand:
             if player != pn:
                 stacksTotal += state.stacks[player]
 
-        avgOppStack = stacksTotal / numOpponents
+        avgOppStack = stacksTotal / (len(state.playersInHand) - 1)
         return min(state.stacks[pn], avgOppStack) / pot
 
 
     @staticmethod
-    def getAmtToCall(pn: int, state) -> float:
+    def getAmtToCall(state: State) -> float:
         """Calculates the amount to call as a percentage of the pot."""
         if state.numAggCS == 0:
             return 0
         
+        pn = state.pnActive
         pos = state.pn_to_pos[pn]
         lastWager = 0 if state.lastWager['amt'] is None else state.lastWager['amt']
-        diff = lastWager - state.history[pos]['invested'][state.street]
+        diff = lastWager - state.inv[pn]
         amtToCall = state.stacks[pn] if diff > state.stacks[pn] else diff
         
-        return amtToCall / Model.getEffPot(pn, state)
+        return amtToCall / Model.getEffPot(state)
 
 
     @staticmethod
-    def getRelPos(pn: int, state) -> float:
+    def getRelPos(state: State) -> float:
         """
         Calculates the relative position of a player divided by the number of players in the
-        hand. If the player is on the button, the output will be 1. Otherwise, the output will be
+        hand. If the player is on the button, the output will be 1; otherwise, the output will be
         in the range (0, 1).
         """
         posRank = lambda pn: POS_RANKS_DICT[state.pn_to_pos[pn]]
-        relPos = sorted(state.playersInHand.keys(), key=posRank).index(pn) + 1
+        relPos = sorted(state.playersInHand.keys(), key=posRank).index(state.pnActive) + 1
         return relPos / len(state.playersInHand)
