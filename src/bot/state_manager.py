@@ -82,7 +82,8 @@ class StateManager:
             return string[2:]
         
         print('\n\nHole cards: ' + self.holeCards)
-        print('\nPositions: ' + str(self.pos_to_pn))
+        print('\nBoard cards: ' + self.board)
+        #print('\nPositions: ' + str(self.pos_to_pn))
         print('\nLast wager: ' + str(self.lastWager))
         print('\nPlayers in hand: ' + str(self.playersInHand))
         print('\nActive player: ' + str(self.pnActive))
@@ -245,12 +246,28 @@ class StateManager:
         self.lastAgg = self.pos_to_pn['BB']
 
 
+    def suitsMatch(self, cards1, cards2):
+        if cards1[0] == cards2[0] and cards1[2] == cards2[2]:
+            return True
+        else:
+            return False
+
+
+    def checkCardIntegrity(self):
+        cards = self.holeCards + self.board
+        numCards = len(cards) // 2
+        cardSet = set()
+        for i in range(0, len(cards), 2):
+            cardSet.add(cards[i] + cards[i+1])
+        assert len(cardSet) == numCards
+
+
     def updateState(self):
         holeCards = self.reader.getHoleCards()
         if not holeCards:  # Hero not in hand
             self.holeCards = ''
             return
-        elif not self.holeCards:
+        elif not self.holeCards or not self.suitsMatch(holeCards, self.holeCards):
             self.initializeState(holeCards)
 
         playersInHand = self.reader.getplayersInHand(self.playersInHand)
@@ -263,6 +280,7 @@ class StateManager:
         print(playersToCheck)
 
         street, self.board = self.reader.getStreetAndBoard(self.street, self.board)
+        self.checkCardIntegrity()
         self.pot = self.reader.getPot()
 
         updated = False
@@ -342,12 +360,12 @@ class StateManager:
         NOTE: Here self.playersInHand and self.street are expected to have not yet been updated
         for the current timestep.
         """
-        time.sleep(1)  # the pot text has a fade-in effect, so ensure that it is fully visible
-        rakedPot = self.reader.getPot(street=True)
-        if rakedPot is None:
-            #raise Exception('Cannot read street pot')
-            print('Cannot read street pot. Using total raked pot instead.')
-            rakedPot = self.pot
+        #time.sleep(1)  # the pot text has a fade-in effect, so ensure that it is fully visible
+        #rakedPot = self.reader.getPot(street=True)
+        #if rakedPot is None:
+        #    print('Cannot read street pot. Using total raked pot instead.')
+        #    rakedPot = self.pot
+        rakedPot = self.pot - self.reader.getTotalWagers(self.playersInHand)
 
         # handle cases where the remaining players checked or folded
         if self.unrakedPot >= rakedPot:

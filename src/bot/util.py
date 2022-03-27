@@ -448,10 +448,10 @@ def quadInterp(x, x0, y0, x1, y1, x2, y2):
 
 
 if __name__ == '__main__':
-    api = PyTessBaseAPI(path='../../tessdata', psm=PSM.SINGLE_LINE, oem=OEM.LSTM_ONLY)
+    api = PyTessBaseAPI(path='../tessdata', psm=PSM.SINGLE_LINE, oem=OEM.LSTM_ONLY)
     #api.SetVariable("tessedit_char_whitelist", "0123456789.JQKA")
 
-    path = '../../img/test/chips2.png'
+    path = '../img/test/4h.png'
     scaleFactor = 4
     binThresh = 180
 
@@ -467,14 +467,14 @@ if __name__ == '__main__':
     #mg = Image.fromarray(img)
 
     #res = getOcrBet(api, img, scaleFactor, binThresh, isMainPot=False)
-    res = getOcrBet_old(api, img, scaleFactor, binThresh)
+    #res = getOcrBet_old(api, img, scaleFactor, binThresh)
     #res = getOcrNumber(api, img, scaleFactor, binThresh, preprocess=False)
     #res = getOcrStack(api, img, scaleFactor, binThresh)
     #print(res)
 
     #img = Image.open(path)
     #res = getCard(api, img, scaleFactor, binThresh)
-    #res = getOcrCard(api, img)
+    res = getOcrCard(api, img)
     print(res)
 
     api.End()

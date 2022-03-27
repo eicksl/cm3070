@@ -1,3 +1,4 @@
+import math
 import eval7  # type: ignore
 import numpy as np
 from itertools import combinations
@@ -47,6 +48,9 @@ class Decision:
             else:
                 return [('R', 1, valuePct)]
 
+        if not unopened and Decision.canCall(state, m):
+            return [('C', 1)]
+
         bluffPct = Decision.getBluffPct(state, m)
         if bluffPct > 0:
             if unopened:
@@ -56,8 +60,6 @@ class Decision:
 
         if unopened:
             return [('X', 1)]
-        elif Decision.canCall(state, m):
-            return [('C', 1)]
         else:
             return [('F', 1)]
 
@@ -113,7 +115,7 @@ class Decision:
         to use as a percentage of the pot. Returns 0 if the hand is not strong enough.
         """
         if state.numAggCS == 0:
-            k = 0.8
+            k = 0.8 if state.street != 'flop' and m['postAgg'] == 0 else 0.7
             agg = 'B'
             options = Decision.betSizes
         else:
@@ -121,7 +123,11 @@ class Decision:
             agg = 'R'
             options = Decision.raiseSizes
 
-        if m['ehsAgg'] ** (m['postAgg'] + 1) < k:
+        z = 1 + m['postAgg'] + m['numOppCall'] * 1 / m['potOdds']
+        #ehs = m['ehsAgg'] ** (1 + m['postAgg'])
+        ehs = m['ehsAgg'] ** z
+        print('getValuePct EHS:', ehs)
+        if ehs < k:
             return 0
         
         # `worth` is basically how much we can value bet based on our hand strength
@@ -159,6 +165,12 @@ class Decision:
         to use as a percentage of the pot. Returns 0 if the hand is not suitable.
         """
         if state.numAggCS == 0:
+            k = 0.5
+            # don't bluff if our hand has showdown value
+            ehs = m['ehsAgg'] ** (1 + m['postAgg'])
+            print('getBluffPct EHS:', ehs)
+            if ehs > k:
+                return 0
             agg = 'B'
             options = Decision.betSizes
         else:
@@ -192,17 +204,21 @@ class Decision:
     def canCall(state, m: dict) -> bool:
         """
         Returns True if the hand makes for a suitable call, and False otherwise.
-        """
-        ehsCall = m['ehsCall'] ** m['postAgg']
-        if ehsCall >= 0.6:
+        """        
+        z = m['postAgg'] + m['numOppCall'] * 1 / m['potOdds']
+        print('z', z)
+        ehs = m['ehsCall'] ** z
+        print('canCall EHS:', ehs)
+        if ehs >= 0.6:
             if m['potOdds'] > 20:
                 return True
 
             r = mapRange(m['potOdds'], 20, 1, 0, 9)
             q = 1 / (r - 10) ** 2
             k = mapRange(q, 0, 1, 0.6, 1)
+            print('canCall k', k)
 
-            if ehsCall > k:
+            if ehs > k:
                 return True
         
         ev = m['nhp'] * m['rakedPot'] - (1 - m['nhp']) * m['callAmt']
@@ -222,14 +238,14 @@ class Decision:
         hs, ppot, npot = Decision.getHandMetrics1(lstHole, lstBoard, opponents)
         ehsCall, ehsAgg = Decision.getEffHandStrength(hs, ppot, npot)
         nhp = Decision.getNuttedPotential1(lstHole, lstBoard, opponents)
-        postAgg, pps = Decision.getPostMetrics(state)
+        postAgg, pps, numOppCall = Decision.getPostMetrics(state)
         rakedPot, heroInv, callAmt, potOdds = Decision.getStateMetrics(state)
         heroRelPos, laRelPos = Decision.getRelPos(state)
         return {
             'hs': hs, 'ppot': ppot, 'npot': npot, 'ehsCall': ehsCall, 'ehsAgg': ehsAgg,
             'postAgg': postAgg, 'pps': pps, 'heroRelPos': heroRelPos, 'laRelPos': laRelPos,
             'pct': Decision.lastWagerAsPct(state), 'nhp': nhp, 'rakedPot': rakedPot,
-            'heroInv': heroInv, 'callAmt': callAmt, 'potOdds': potOdds
+            'heroInv': heroInv, 'callAmt': callAmt, 'potOdds': potOdds, 'numOppCall': numOppCall
         }
 
 
@@ -258,7 +274,7 @@ class Decision:
         heroInv = state.history[state.pn_to_pos[0]]['invested'][state.street]
         if state.lastWager['amt'] is None:
             callAmt = 0
-            potOdds = None
+            potOdds = math.inf
         else:
             callAmt = state.lastWager['amt'] - heroInv
             potOdds = rakedPot / callAmt
@@ -275,6 +291,7 @@ class Decision:
         totAgg = 0
         pps = {}  # number of players per street
         pps[state.street] = len(state.playersInHand)
+        numOppCall = 0  # num of opponents that called the last wager
 
         for street in state.line:
             if street == 'pre':
@@ -289,8 +306,11 @@ class Decision:
                     pps[state.street] += 1
             if street != state.street:
                 pps[street] = len(players)
+            else:
+                if action['agg'] == 'C' and action['wager'] == state.lastWager['amt']:
+                    numOppCall += 1
         
-        return totAgg, pps
+        return totAgg, pps, numOppCall
 
 
     @staticmethod
@@ -339,6 +359,7 @@ class Decision:
         # remove hole cards and board cards from the deck
         deck = DECK.copy()
         knownCards = holeCards + boardCards
+        print(knownCards)
         for card in knownCards:
             deck.remove(card)
         
@@ -472,7 +493,7 @@ class Decision:
 
 
     @staticmethod
-    def getNuttedPotential1(holeCards: list, boardCards: list, numOpponents: list, k=0.93) -> float:
+    def getNuttedPotential1(holeCards: list, boardCards: list, numOpponents: list, k=0.955) -> float:
         if len(boardCards) == 5:
             return None
         
@@ -496,7 +517,7 @@ class Decision:
 
 
     @staticmethod
-    def getNuttedPotential2(holeCards: list, boardCards: list, numOpponents: list, k=0.93) -> float:
+    def getNuttedPotential2(holeCards: list, boardCards: list, numOpponents: list, k=0.955) -> float:
         if len(boardCards) == 5:
             return None
         
@@ -524,9 +545,9 @@ class Decision:
 
 
 if __name__ == '__main__':
-    holeCards = ['9h', 'Jh']
-    boardCards = ['Qs', '9d', '5d']
-    numOpponents = 1
+    holeCards = ['Jd', 'Js']
+    boardCards = ['8c', '6s', '2s']
+    numOpponents = 2
 
     print('holeCards: ' + str(holeCards))
     print('boardCards: ' + str(boardCards))

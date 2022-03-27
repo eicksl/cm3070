@@ -136,18 +136,7 @@ class Reader:
             if villainHasCards(npImg):
                 new[num] = playersInHand[num]
         return new
-
-    """
-    def getBets(self, playersInHand):
-        bets = {}
-        for num in playersInHand:
-            bbox = self.areas[self.table]['bets'][num]
-            pilImg = self.getPilImage(bbox)
-            amount = getOcrNumber(self.api, pilImg, self.scaleFactor, self.binThresh)
-            if amount:
-                bets[num] = amount
-        return bets
-    """
+    
 
     def getActivePlayer(self, playersInHand):
         for num in playersInHand:
@@ -166,6 +155,16 @@ class Reader:
             return getOcrBet_old(self.api, img, self.scaleFactor, self.binThresh)
         else:
             return getOcrBet(self.api, img, self.scaleFactor, self.binThresh)
+
+
+    def getTotalWagers(self, playersInHand):
+        total = 0
+        for pn in playersInHand:
+            if pn != 0:
+                wager = self.getWager(pn)
+                if wager:
+                    total += wager
+        return total
 
 
     def getPot(self, street=False):

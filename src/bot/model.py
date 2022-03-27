@@ -64,13 +64,14 @@ class Model:
                 state.numAggCS += 1
             case 'R':
                 callAmt = state.lastWager['amt'] - state.inv[pn]
+                state.stacks[pn] -= callAmt
                 potAfterCall = state.pot + callAmt
-                raiseAmt = pct * potAfterCall
+                raiseAmt = min(state.stacks[pn], pct * potAfterCall)
                 totAmt = callAmt + raiseAmt
-                if totAmt > state.stacks[pn]:
+                if raiseAmt > state.stacks[pn]:
                     raise Exception("Raise amount cannot exceed the player's stack size")
                 state.pot += totAmt
-                state.stacks[pn] -= totAmt
+                state.stacks[pn] -= raiseAmt
                 state.inv[pn] += totAmt
                 wager = state.lastWager['amt'] + raiseAmt
                 state.lastWager.update({'pn': pn, 'amt': wager})
