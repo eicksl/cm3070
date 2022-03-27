@@ -286,7 +286,7 @@ class ZenithNash:
             # no one limped or raised yet, so use an RFI range
             data = self.rfi[heroPos][rset]
             strategy = self.computeBestResponse(data, heroHand, heroPos)
-            return strategy, line
+            return strategy, {'pre': line}
         
         url = '{}/{}/positions/{}/freqs'.format(self.baseUrl, rset, line[faIndex]['pos'])
         nodePath, asmptLine = self.getNodePath(line, faIndex, url, rset)
@@ -306,7 +306,7 @@ class ZenithNash:
         strategy = self.computeBestResponse(data, heroHand, heroPos)
         self.resetAsmptValues()
 
-        return strategy, asmptLine
+        return strategy, {'pre': asmptLine}
 
 
     def sendRequest(self, url):

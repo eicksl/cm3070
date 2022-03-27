@@ -42,6 +42,7 @@ class StateManager:
         # performing that action
         self.line = {'pre': [], 'flop': [], 'turn': [], 'river': []}  # represents the state
         self.asmptLine = self.line.copy()
+        self.alReject = False  # whether to reject the assumptive state
         self.history = {}  # player-specific lines and investment per street
         self.pnLastActive = None  # active player from the last update
         self.pnActive = None  # currently active player
@@ -68,19 +69,34 @@ class StateManager:
         self.history['BB']['totalInv'] = 1.0
 
 
-    def printState(self):
+    def getLineString(self, line):
+        string = ''
+        for key in line:
+            if len(line[key]) == 0:
+                break
+            string += ', ' + key[0].upper() + key[1:] + ' '
+            for action in line[key]:
+                if action['agg'] in ['B', 'R']:
+                    code = action['agg'] + str(round(action['wager'], 1))
+                    if code[-2:] == '.0':
+                        code = code[:-2]
+                else:
+                    code = action['agg']
+                string += code + '-'
+            string = string[:-1]
+        return string[2:]
 
-        def _getLineString():
-            string = ''
-            for key in self.line:
-                if len(self.line[key]) == 0:
-                    continue
-                string += ', ' + key[0].upper() + key[1:] + ' '
-                for action in self.line[key]:
-                    string += action['agg'] + '-'
-                string = string[:-1]
-            return string[2:]
-        
+
+    def getAsmptLineString(self):
+        string = ''
+        for key in self.asmptLine:
+            if len(self.asmptLine[key]) == 0:
+                break
+            string += ', ' + key[0].upper() + key[1:] + ' ' + self.asmptLine[key]
+        return string[2:]
+
+
+    def printState(self):        
         print('\n\nHole cards: ' + self.holeCards)
         print('\nBoard cards: ' + self.board)
         #print('\nPositions: ' + str(self.pos_to_pn))
@@ -92,7 +108,14 @@ class StateManager:
         if self.verbose:
             print('\nLine: ' + json.dumps(self.line, indent=4))
             print('\nHistory: ' + json.dumps(self.history, indent=4))
-        print('\nLine string: ' + _getLineString())
+        strLine = self.getLineString(self.line)
+        print('\nLine (R): ' + strLine)
+        if not self.alReject:
+            if isinstance(self.asmptLine['pre'], str):
+                string = self.getAsmptLineString()
+            else:
+                string = strLine
+            print('\nLine (A): ' + string)
         print('\n\n\n')
 
 
@@ -229,6 +252,7 @@ class StateManager:
         self.lastStreet = 'pre'
         self.line = {'pre': [], 'flop': [], 'turn': [], 'river': []}
         self.asmptLine = self.line.copy()
+        self.alReject = False
         self.sawFlopHeadsUp = False
         self.effStack = None
         self.resetPlayerHistory()
@@ -481,29 +505,25 @@ class StateManager:
         print('\nhandleHeroDecision')
 
         self.stacks = self.reader.getStacks(self.playersInHand)
-        if self.street != 'pre':
-            x = Decision.make(self)
-            print(x)
-        return
 
         if not self.effStack and len(self.playersInHand) == 2:
-            self.updateEffStack(stacks)
+            self.updateEffStack(self.stacks)
         effStack = 100 if not self.effStack else self.effStack
 
-        if self.street == 'pre':
-            strategy, self.asmptLine = self.zenith.getStrategy(
-                self.line['pre'], effStack, self.holeCards, self.pn_to_pos[0]
-            )
-        elif not self.sawFlopHeadsUp:
-            return
-        else:
-            strategy, self.asmptLine = self.wizard.getStrategy(
-                self.line, self.holeCards, self.board
-            )
+        strategy = None
+        if not self.alReject:
+            if self.street == 'pre':
+                strategy, self.asmptLine = self.zenith.getStrategy(
+                    self.line['pre'], effStack, self.holeCards, self.pn_to_pos[0]
+                )
+            elif self.sawFlopHeadsUp:
+                strategy, self.asmptLine = self.wizard.getStrategy(
+                    self.line, self.holeCards, self.board
+                )
 
         if strategy is None:
-            print('No strategy available for the current state')
-            return
+            self.alReject = True
+            strategy = Decision.make(self)
         
         rng = SystemRandom().random()
         tot = 0
@@ -515,8 +535,6 @@ class StateManager:
                 break
         assert decision is not None
 
-        if self.street != 'pre':
-            print('Line (A): {}'.format(self.asmptLine))
         print('Strategy: {}'.format(strategy))
         print('RNG: {}'.format(round(rng * 100)))
         if self.street == 'pre':

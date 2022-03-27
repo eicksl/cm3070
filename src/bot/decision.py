@@ -10,6 +10,13 @@ from src.bot.util import mapRange
 
 class Decision:
 
+    # pre-flop ranges
+    call_vs_6 = set(['JJ', 'TT', 'AQs', 'AQo', 'AJs', 'KQs'])
+    raise_vs_6 = set(['AA', 'KK', 'QQ', 'AKs', 'AKo'])
+    call_vs_20 = set(['QQ', 'JJ', 'AKs', 'AKo'])
+    raise_vs_20 = set(['AA', 'KK'])
+
+
     # bet and raise sizes as pct of pot
     betSizes = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5]
     raiseSizes = [0.3, 0.5, 0.7, 0.9, 1.1, 1.3]
@@ -20,17 +27,6 @@ class Decision:
             return Decision.make_pre(state)
         
         m = Decision.getMetrics(state)
-        """
-        match state.pfRaises:
-            case 0:
-                return Decision.make_limped(state, metrics)
-            case 1:
-                return Decision.make_srp(state, metrics)
-            case 2:
-                return Decision.make_3bp(state, metrics)
-            case _:
-                return Decision.make_4bp(state, metrics)
-        """
         unopened = state.numAggCS == 0  # no one bet yet
 
         # check to PFR on flop when OOP
@@ -65,47 +61,25 @@ class Decision:
 
 
     @staticmethod
-    def make_pre(state, m: dict) -> list:
-        return [('F', 1)]
+    def make_pre(state) -> list:
+        wager = state.lastWager['amt']
+        heroInv = state.history[state.pn_to_pos[0]]['invested'][state.street]
+        hand = state.zenith.convertHoleCards(state.holeCards)
 
-
-    @staticmethod
-    def make_limped(state, m: dict) -> list:
-        #worth = mapRange()
-        if state.street == 'flop':
-            if state.numAggCS == 0:
-                if len(state.playersInHand) == 2 and m['relPos'] == 0:
-                    return [('X', 1)]
-                elif m['ehsAgg'] > 0.8:
-                    return [('B', 1, 0.5)]
-                else:
-                    return [('X', 1)]
-            elif state.numAggCS == 1:
-                if m['pct'] > 1.5:
-                    pass
-                #kCall = mapRange(m['pct'], )
-                if m['ehsAgg'] > 0.94:
-                    return [('R', 1, '??????????????')]
-                elif m['ehsCall'] > 0.7:
-                    return [('C', 1)]
-                else:
-                    return [('F', 1)]
-        return []
-
-
-    @staticmethod
-    def make_srp(state, m: dict) -> list:
-        pass
-
-
-    @staticmethod
-    def make_3bp(state, m: dict) -> list:
-        pass
-
-
-    @staticmethod
-    def make_4bp(state, m: dict) -> list:
-        pass
+        if wager <= 6:
+            if hand in Decision.raise_vs_6:
+                return [('R', 1, 1.05)]
+            elif hand in Decision.call_vs_6:
+                return [('C', 1)]
+        elif wager <= 20:
+            if hand in Decision.raise_vs_20:
+                return [('R', 1, 0.8)]
+            elif hand in Decision.call_vs_20 and heroInv > 1:
+                return [('C', 1)]
+        elif hand in Decision.raise_vs_20:
+            return [('R', 1, 1000)]
+        
+        return [('F', 1)] if wager > 1 else [('X', 1)]
 
 
     @staticmethod
