@@ -303,8 +303,6 @@ class StateManager:
             return
 
         playersToCheck = self.getPlayersToCheck()
-        print(playersToCheck)
-
         street, self.board = self.reader.getStreetAndBoard(self.street, self.board)
         self.checkCardIntegrity()
         self.pot = self.reader.getPot()
@@ -357,7 +355,6 @@ class StateManager:
             elif wager < 1 or pn == self.lastWager['pn'] and wager == self.lastWager['amt']:
                 break
 
-            #print(wager)
             assert self.lastWager['amt'] is None or wager >= self.lastWager['amt']
             if wager == self.lastWager['amt']:
                 self.addAction(pn, 'C', wager)

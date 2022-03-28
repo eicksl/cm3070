@@ -1,6 +1,9 @@
-import os, keyboard
+import os
+import keyboard
+from playsound import playsound  # type: ignore
 from src.bot.table_setup import TableSetup
 from src.bot.state_manager import StateManager
+from src.bot.constants import ALERT_DIR
 
 
 def printMainMenu():
@@ -35,5 +38,9 @@ def run():
 if __name__ == '__main__':
     keyboard.add_hotkey('esc', lambda: os.system('taskkill /im winpty-agent.exe'))
     sm = StateManager(1, debug=True)
-    sm.run()
-    #sm.test_run()
+    try:
+        sm.run()
+        #sm.test_run()
+    except Exception as error:
+        playsound(ALERT_DIR)
+        raise error

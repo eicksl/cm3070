@@ -42,19 +42,14 @@ class Actor:
                 case _:
                     # bet or raise action
                     pct = action[2]
-                    code = round(pct * 100 / 2.5) * 25
-                    useShift = False
+                    code = round(pct * 100 / 5) * 50
                     if code > 2050:
                         key = 'plus'
-                    elif code >= 1100:
-                        useShift = True
-                        code -= 1000
-                        key = HOTKEYS[code]
                     else:
                         key = HOTKEYS[code]
                     #time.sleep(mapRange(random(), 0, 1, 3, 7))
                     Actor.send(key)
-                    time.sleep(mapRange(random(), 0, 1, 1, 3))
+                    time.sleep(mapRange(random(), 0, 1, 0.5, 1.8))
                     Actor.send('up')
 
 

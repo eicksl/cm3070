@@ -124,7 +124,7 @@ class WizardNash:
         else:
             base = self.baseUrl if isSolution else self.optionsUrl
             url = base + state + stem
-            print(url)
+            #print(url)
             data = self.sendRequest(url)
             if data is None:
                 with open(CONFIG_DIR + 'wizard-cache.txt', 'a') as file:

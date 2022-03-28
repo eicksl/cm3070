@@ -281,11 +281,10 @@ class Decision:
                     players.add(action['pos'])
                 elif action['agg'] == 'F':
                     pps[state.street] += 1
-            if street != state.street:
-                pps[street] = len(players)
-            else:
-                if action['agg'] == 'C' and action['wager'] == state.lastWager['amt']:
-                    numOppCall += 1
+                if street == state.street:
+                    if action['agg'] == 'C' and action['wager'] == state.lastWager['amt']:
+                        numOppCall += 1
+            pps[street] = len(players)
         
         return totAgg, pps, numOppCall
 
@@ -336,7 +335,6 @@ class Decision:
         # remove hole cards and board cards from the deck
         deck = DECK.copy()
         knownCards = holeCards + boardCards
-        print(knownCards)
         for card in knownCards:
             deck.remove(card)
         
