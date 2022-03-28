@@ -5,6 +5,7 @@ from collections import OrderedDict
 
 RAKE = 0.05  # used to estimate how much was raise/called on a prior street
 RAKE_CAP = 15
+MSE_THRESH = 20
 TESSDATA_DIR = os.path.abspath('../tessdata')
 MODEL_DIR = os.path.abspath('../model.keras')
 IMAGE_DIR = os.path.abspath('../img') + '/'
@@ -34,6 +35,13 @@ OCR_MAP = {
     'lO': 'T', 'iO': 'T', 'IO': 'T', 'lio': 'T', '[|': 'T', '(0)': 'T',
     '-.': '5', 's:': '8', 'qT': '7', '-.)': '5', 'oe': '2', 'G': 'Q', '0': '9',
     's': '5', '=': '5'
+}
+HOTKEYS = {
+    100: 'f1', 125: '1', 150: 'q', 175: 'a', 200: 'f2', 225: '2', 250: 'w', 275: 's',
+    300: 'f3', 325: '3', 350: 'e', 375: 'd', 400: 'f4', 425: '4', 450: 'r', 475: 'f',
+    500: 'f5', 525: '5', 550: 't', 575: 'g', 600: 'f6', 625: '6', 650: 'y', 675: 'h',
+    700: 'f7', 725: '7', 750: 'u', 775: 'j', 800: 'f8', 825: '8', 850: 'i', 875: 'k',
+    900: 'f9', 925: '9', 950: 'o', 975: 'l', 1000: 'f10', 1025: '0', 1050: 'p', 1075: ';'
 }
 HSV_LOWER = np.array([0, 0, 160], dtype=np.uint8)
 HSV_UPPER = np.array([95, 110, 255], dtype=np.uint8)

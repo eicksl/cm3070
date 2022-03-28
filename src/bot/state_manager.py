@@ -7,9 +7,10 @@ from src.bot.reader import Reader
 from src.bot.zenith_nash import ZenithNash
 from src.bot.wizard_nash import WizardNash
 from src.bot.decision import Decision
+from src.bot.actor import Actor
 from src.bot.constants import (
     POS_RANKS_LIST_PRE, POS_RANKS_DICT_PRE, POS_RANKS_LIST_PRE,
-    POS_RANKS_DICT, RAKE, RAKE_CAP, IMAGE_DIR
+    POS_RANKS_DICT, RAKE, RAKE_CAP, IMAGE_DIR, MSE_THRESH
 )
 from PIL import ImageGrab
 
@@ -108,13 +109,12 @@ class StateManager:
         if self.verbose:
             print('\nLine: ' + json.dumps(self.line, indent=4))
             print('\nHistory: ' + json.dumps(self.history, indent=4))
-        strLine = self.getLineString(self.line)
-        print('\nLine (R): ' + strLine)
+        print('\nLine (R): ' + self.getLineString(self.line))
         if not self.alReject:
             if isinstance(self.asmptLine['pre'], str):
                 string = self.getAsmptLineString()
             else:
-                string = strLine
+                string = self.getLineString(self.asmptLine)
             print('\nLine (A): ' + string)
         print('\n\n\n')
 
@@ -293,6 +293,8 @@ class StateManager:
             return
         elif not self.holeCards or not self.suitsMatch(holeCards, self.holeCards):
             self.initializeState(holeCards)
+            if self.zenith.canFastFold(holeCards, self.pn_to_pos[0]):
+                Actor.fastFold()
 
         playersInHand = self.reader.getplayersInHand(self.playersInHand)
         self.pnActive = self.reader.getActivePlayer(playersInHand)
@@ -438,7 +440,6 @@ class StateManager:
         else:
             # Hero is assumed to have acted aggressively as pnLastActive
             # however, the bet or raise amount is unknown and must be estimated
-            #print(self.pnLastActive, playersToCheck, remaining)
             assert self.pnLastActive == playersToCheck[0] == remaining[0] == 0
 
             # unrakedEst is an estimate of what the actual unraked pot is for the current
@@ -452,7 +453,6 @@ class StateManager:
 
             # calculate raise amount and update actions
             wager = round((unrakedEst - self.unrakedPot + inv_st) / len(remaining), 2)
-            #print('wager: ' + str(wager))
             actions[0] = (0, 'B' if self.lastWager['amt'] is None else 'R', wager)
             remaining.pop(0)
             for pn in remaining:
@@ -462,6 +462,40 @@ class StateManager:
         for pn in playersToCheck:
             if pn in actions:
                 self.addAction(*actions[pn])
+
+
+    def isAsmptReliable(self):
+        """
+        Checks the reliability of the assumptive state by computing the mean squared error
+        between real and assumptive wagers.
+
+        :returns: True if reliable, else False
+        """
+        totError = 0
+        totAgg = 0
+        for key in self.asmptLine:
+            if isinstance(self.asmptLine['pre'], list):
+                for i in range(len(self.asmptLine[key])):
+                    action = self.asmptLine[key][i]
+                    if action['agg'] in ['B', 'R']:
+                        totError += (self.line[key][i]['wager'] - action['wager']) ** 2
+                        totAgg += 1
+            else:
+                actions = self.asmptLine[key].split('-')
+                if len(actions[0]) == 0:
+                    break
+                for i in range(len(actions)):
+                    if actions[i][0] in ['B', 'R']:
+                        wager = float(actions[i][1:])
+                        totError += (self.line[key][i]['wager'] - wager)
+                        totAgg += 1
+
+        if totAgg == 0:
+            return True
+
+        mse = totError / totAgg
+        print('MSE:', mse)
+        return mse < MSE_THRESH
 
 
     def pctToWager(self, agg, pctPot):
@@ -479,7 +513,9 @@ class StateManager:
         def _getPreDecisionString(decision, effStack):
             agg = decision[0]
             string = {'f': 'Fold', 'c': 'Call', 'r': 'Raise', 'j': 'All-in'}[agg]
-            if agg == 'r':
+            if agg == 'c' and self.lastWager['pn'] == 0:
+                string = 'Check'
+            elif agg == 'r':
                 pct = decision[2]
                 wager = round(self.pctToWager('R', pct), 2)
                 string += ' {}% ({} BB)'.format(round(pct * 100), wager)
@@ -521,7 +557,7 @@ class StateManager:
                     self.line, self.holeCards, self.board
                 )
 
-        if strategy is None:
+        if strategy is None or self.alReject or not self.isAsmptReliable():
             self.alReject = True
             strategy = Decision.make(self)
         
@@ -537,11 +573,12 @@ class StateManager:
 
         print('Strategy: {}'.format(strategy))
         print('RNG: {}'.format(round(rng * 100)))
-        if self.street == 'pre':
+        if self.street == 'pre' and not self.alReject:
             strDecision = _getPreDecisionString(decision, effStack)
         else:
             strDecision = _getPostDecisionString(decision)
         print('Decision: {}\n'.format(strDecision))
+        Actor.perform(self, decision)
 
 
     def run(self):

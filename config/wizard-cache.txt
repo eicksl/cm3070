@@ -402,3 +402,21 @@
 [["R2", 2.0, 0.36], ["R4", 4.0, 0.73], ["R8.5", 8.5, 1.55], ["RAI", 98.0, 17.82]]
 ?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=F-R2-C-F-F-F&flop_actions=X-X&turn_actions=X-X&river_actions=X-R4
 [["R11", 11.0, 0.52], ["R15.5", 15.5, 0.85], ["RAI", 98.0, 6.96]]
+?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=F-R2-F-F-F-C&flop_actions=&turn_actions=&river_actions=X-R3.4-C&turn_actions=X-X&river_actions=
+[["R1.5", 1.5, 0.33], ["R2.25", 2.25, 0.5], ["R3.4", 3.4, 0.76], ["R5.6", 5.6, 1.24], ["R7.9", 7.9, 1.76], ["R11.25", 11.25, 2.5], ["RAI", 98.0, 21.78]]
+?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=F-R2-F-F-F-C&flop_actions=X-R3.4-C&turn_actions=X-X&river_actions=R3.4
+[["R11", 11.0, 0.42], ["R18", 18.0, 0.81], ["R26", 26.0, 1.25], ["RAI", 94.6, 5.04]]
+?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=F-F-R2.3
+[["R7.5", 7.5, 0.85], ["RAI", 100.0, 16.02]]
+?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=F-F-R2.3-R7.5-F-F-C
+[["R5.45", 5.45, 0.33], ["R8.25", 8.25, 0.5], ["R12.4", 12.4, 0.75], ["R20.6", 20.6, 1.25], ["RAI", 92.5, 5.61]]
+?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=F-F-R2.3-R7.5-F-F-C&flop_actions=X
+[["R5.45", 5.45, 0.33], ["R8.25", 8.25, 0.5], ["R12.4", 12.4, 0.75], ["R20.6", 20.6, 1.25], ["RAI", 92.5, 5.61]]
+?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=F-F-R2.3-R7.5-F-F-C&flop_actions=X-R12.4
+[["R26.05", 26.05, 0.33], ["R33.05", 33.05, 0.5], ["RAI", 92.5, 1.94]]
+?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=F-F-R2.3-R7.5-F-F-C&flop_actions=X-R12.4-C
+[["R8.25", 8.25, 0.2], ["RAI", 80.1, 1.94]]
+?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=F-F-R2.3-R7.5-F-F-C&flop_actions=X-R12.4-C&turn_actions=X-X
+[["R4", 4.0, 0.1], ["R14.5", 14.5, 0.35], ["R25", 25.0, 0.61], ["R35.5", 35.5, 0.86], ["RAI", 80.1, 1.94]]
+?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=F-F-R2.3-F-F-C&flop_actions=X-X&turn_actions=X
+[["R1.7", 1.7, 0.33], ["R2.55", 2.55, 0.5], ["R3.8", 3.8, 0.75], ["R6.4", 6.4, 1.25], ["R8.9", 8.9, 1.75], ["R12.75", 12.75, 2.5]]

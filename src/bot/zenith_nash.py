@@ -20,7 +20,7 @@ class ZenithNash:
             '200_STD': '20210517'
         }
         # if actual raise amt is < lowest raise option - thresh OR > highest + thresh,
-        # then zenith is not used
+        # then zenith is not used (thresh is a pct of pot)
         self.thresh = 20
         self.session = requests.Session()
         with open(CONFIG_DIR + 'rfi-ranges.json') as file:
@@ -205,9 +205,10 @@ class ZenithNash:
 
         sizes.sort()
         pct = action['pctPot'] * 100
-        if pct < sizes[0] - self.thresh:
-            return None, None
-        elif pct > sizes[-1] + self.thresh:
+        #if pct < sizes[0] - self.thresh:  # uncomment to use thresh for under-sizings
+        #    return None, None
+        #elif pct > sizes[-1] + self.thresh:
+        if pct > sizes[-1] + self.thresh:
             # TODO: may want to use the exact jam pct of pot instead of 100x the pot
             return (100, 'j') if hasJam else (None, None)
         
@@ -277,6 +278,16 @@ class ZenithNash:
         return path, line[:faIndex] + asmptLine
 
 
+    def canFastFold(self, holeCards, heroPos):
+        if heroPos == 'BB':
+            return False
+        hand = self.convertHoleCards(holeCards)
+        strategy = self.rfi[heroPos]['100_STD']['frequency'][self.indices[hand]]
+        if strategy[heroPos + 'f'] > 0.99:
+            return True
+        return False
+
+
     def getStrategy(self, line, effStack, holeCards, heroPos):
         faIndex = self._getFirstAction(line)
         heroHand = self.convertHoleCards(holeCards)
@@ -304,6 +315,8 @@ class ZenithNash:
         
         assert heroPos in data['nextOptions'][0]
         strategy = self.computeBestResponse(data, heroHand, heroPos)
+        if not strategy:
+            return None, line
         self.resetAsmptValues()
 
         return strategy, {'pre': asmptLine}
@@ -392,6 +405,8 @@ class ZenithNash:
         del hand['_row']
         # sum used for normalization
         tot = sum(hand.values())
+        if tot == 0:
+            return None
         for action, freq in hand.items():
             if action[2] not in ['m', 'r']:
                 options.append((action[2], freq / tot))

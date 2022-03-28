@@ -35,5 +35,5 @@ def run():
 if __name__ == '__main__':
     keyboard.add_hotkey('esc', lambda: os.system('taskkill /im winpty-agent.exe'))
     sm = StateManager(1, debug=True)
-    #sm.run()
-    sm.test_run()
+    sm.run()
+    #sm.test_run()

@@ -78,8 +78,11 @@ class Decision:
                 return [('C', 1)]
         elif hand in Decision.raise_vs_20:
             return [('R', 1, 1000)]
+
+        if state.lastWager['pn'] == 0:  # limped to Hero in BB
+            return [('X', 1)]
         
-        return [('F', 1)] if wager > 1 else [('X', 1)]
+        return [('F', 1)]
 
 
     @staticmethod
