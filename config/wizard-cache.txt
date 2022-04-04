@@ -702,3 +702,27 @@
 [["R18.2", 18.2, 0.35], ["R24.85", 24.85, 0.55], ["RAI", 90.0, 2.51]]
 ?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=F-F-F-F-R3-R10-C&flop_actions=X-R6.6-R24.85-C
 [["R23", 23.0, 0.33], ["R34.85", 34.85, 0.5], ["RAI", 65.15, 0.93]]
+?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=F-R2-F-R7.5-F-F-C&flop_actions=X
+[["R5.45", 5.45, 0.33], ["R8.25", 8.25, 0.5], ["R12.4", 12.4, 0.75], ["R20.6", 20.6, 1.25], ["RAI", 92.5, 5.61]]
+?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=F-R2-F-R7.5-F-F-C&flop_actions=X-X&turn_actions=
+[["R5.45", 5.45, 0.33], ["R8.25", 8.25, 0.5], ["R12.4", 12.4, 0.75], ["R20.6", 20.6, 1.25], ["R28.9", 28.9, 1.75], ["R41.25", 41.25, 2.5], ["RAI", 92.5, 5.61]]
+?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=F-R2-F-R7.5-F-F-C&flop_actions=X-X&turn_actions=R8.25
+[["R19.8", 19.8, 0.35], ["R26.4", 26.4, 0.55], ["RAI", 92.5, 2.55]]
+?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=F-F-R2.3-F-R11.5-F
+[["R25", 25.0, 0.56], ["RAI", 100.0, 3.69]]
+?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=F-F-R2.3-F-R11.5-F-R25-C&flop_actions=X
+[["R5.1", 5.1, 0.1], ["R12.75", 12.75, 0.25], ["R25.5", 25.5, 0.5], ["R38.25", 38.25, 0.75], ["RAI", 75.0, 1.47]]
+?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=F-F-R2.3-F-R11.5-F-R25-C&flop_actions=X-R5.1-C&turn_actions=X
+[["R6.1", 6.1, 0.1], ["R15.3", 15.3, 0.25], ["R30.6", 30.6, 0.5], ["R45.9", 45.9, 0.75], ["RAI", 69.9, 1.14]]
+?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=F-F-R2.3-F-R11.5-F-R25-C&flop_actions=&turn_actions=&river_actions=X-R5.1-C&turn_actions=X
+[["R6", 6.0, 0.1], ["R21.5", 21.5, 0.35], ["R37", 37.0, 0.6], ["RAI", 69.9, 1.14]]
+?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=F-F-R2.3-F-R11.5-F-R25-C&flop_actions=X-R5.1-C&turn_actions=X-R6-C&river_actions=X
+[["R7.5", 7.5, 0.1], ["R26", 26.0, 0.36], ["R44.5", 44.5, 0.61], ["RAI", 63.9, 0.87]]
+?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=R2-F-R6.5-F-F-F-C&flop_actions=X-R10.9
+[["R23.6", 23.6, 0.35], ["R30.85", 30.85, 0.55], ["RAI", 93.5, 2.28]]
+?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=R2-F-R6.5-F-F-F-C&flop_actions=X-R10.9-C
+[["R7.25", 7.25, 0.2], ["R18.15", 18.15, 0.5], ["RAI", 82.6, 2.28]]
+?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=R2-F-R6.5-F-F-F-C&flop_actions=X-R10.9-C&turn_actions=X-X
+[["R3.5", 3.5, 0.1], ["R12.5", 12.5, 0.34], ["R21.5", 21.5, 0.59], ["R30.5", 30.5, 0.84], ["R54.5", 54.5, 1.5], ["RAI", 82.6, 2.28]]
+?gametype=Cash6m50zGeneral&depth=100&stacks=&preflop_actions=F-F-F-F-R3-C&flop_actions=R4.5
+[["R12", 12.0, 0.5], ["R19.5", 19.5, 1.0], ["RAI", 97.0, 6.17]]
