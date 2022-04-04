@@ -42,6 +42,11 @@ class Parser:
         self.outPath = outPath
         self.hands = None
         self.reset()
+        # following only used for winrate extraction
+        self.username = '______'  # enter username here
+        self.netWon = 0
+        self.totRake = 0
+        self.totHands = 0
 
 
     def reset(self):
@@ -92,6 +97,46 @@ class Parser:
             #print('{} out of {} hands completed'.format(i, len(self.hands)))
 
 
+    def extractWinrate(self):
+        for i in range(len(self.hands)):
+            self.lines = self.hands[i].split('\n')
+            self.reset()
+            self.getPlayerInfo()
+            if len(self.pos) > 2:
+                self.getPreAction(reset=False)
+                if self.lines[self.index].startswith('*** FLOP'):
+                    self.getPostAction(reset=False)
+            self.updateNetWon(self.hands[i])
+
+
+    def updateNetWon(self, hand):
+        if 'Limit ($0.01/$0.02)' not in hand:
+            return
+        
+        self.totHands += 1
+        lines = hand.split('*** SUMMARY ***')[1].split('\n')
+        pot_rake = lines[1].split()
+        pot = float(pot_rake[2][1:])
+
+        if 'Side pot' in lines[1]:
+            rake = float(pot_rake[11][1:-1])
+        else:
+            rake = float(pot_rake[5][1:])
+
+        won = False
+        for i in range(1, len(lines)):
+            line = lines[i]
+            if len(line) == 0:
+                break
+            if self.username in line and ('collected' in line or 'won' in line):
+                won = True
+                self.netWon += pot
+                self.totRake += rake
+        
+        if not won:
+            self.netWon -= self.inv[self.username]
+
+
     def getPlayerInfo(self):
         pos = []
         while self.lines[self.index].startswith('Seat'):
@@ -119,7 +164,7 @@ class Parser:
         self.pos = dict(pos)
 
     
-    def getPreAction(self):
+    def getPreAction(self, reset=True):
         while not self.lines[self.index].startswith('***'):
             line = self.lines[self.index]
             if ': ' not in line:
@@ -147,7 +192,8 @@ class Parser:
             parts = right.split()
             self.addAction(name, parts)
 
-        self.resetInv()
+        if reset:
+            self.resetInv()
 
 
     def addAction(self, name, parts):
@@ -197,7 +243,7 @@ class Parser:
         return agg
 
 
-    def getPostAction(self):
+    def getPostAction(self, reset=True):
         while True:
             line = self.lines[self.index]
             if line.startswith('***'):
@@ -217,7 +263,8 @@ class Parser:
                     self.boardCards.append(parts[7][1])
                     self.boardSuits.append(parts[7][2])
                 self.street += 1
-                self.resetInv()
+                if reset:
+                    self.resetInv()
             elif ': ' not in line:
                 pass
             else:
@@ -226,7 +273,8 @@ class Parser:
                 if len(parts) > 0:
                     result = self.getActionResult(parts[0])
                     if result:
-                        self.addNodeInfo(name, result)
+                        if reset:
+                            self.addNodeInfo(name, result)
                         self.addAction(name, parts)
             self.index += 1
 
@@ -348,15 +396,35 @@ class Parser:
 
 
 
-if __name__ == '__main__':
+def extractFeatures():
     path = '../../data/'
-    #if os.path.exists('out.csv'):
-    #    os.remove('out.csv')
+    if os.path.exists('out.csv'):
+        os.remove('out.csv')
     files = [path + file for file in os.listdir(path)]
     parser = Parser()
-    for i in range(10273, len(files)):
+    for i in range(len(files)):
         file = files[i]
         parser.loadFile(file)
         print('Loaded ' + file.split(path)[1])
         parser.extract()
         print('{} out of {} files completed\n'.format(i+1, len(files)))
+
+
+def extractWinrate():
+    parser = Parser()
+    path = '../hands/' + parser.username + '/'
+    if os.path.exists('out.csv'):
+        os.remove('out.csv')
+    files = [path + file for file in os.listdir(path)]
+    for file in files:
+        parser.loadFile(file)
+        parser.extractWinrate()
+    print('Total hands:', parser.totHands)
+    print('Net won:', parser.netWon)
+    print('Total rake paid:', parser.totRake)
+        
+
+
+if __name__ == '__main__':
+    #extractFeatures()
+    extractWinrate()

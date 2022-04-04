@@ -54,6 +54,7 @@ class StateManager:
         self.lastWager = {'pn': None, 'amt': None}  # pn and amount, reset every street
         self.lastAgg = None  # last aggressor (pn), only reset after each hand
         self.numAggCS = 0  # number of bets and raises, reset every street
+        self.limpedPot = False
 
 
     def resetPlayerHistory(self):
@@ -229,6 +230,7 @@ class StateManager:
                 self.lastWager.update({'pn': pn, 'amt': wager})
             elif self.unrakedPot <= 2.5:  # player open-limped
                 self.lastAgg = pn
+                self.limpedPot = True
         
         if agg in ['X', 'C']:
             history['c'] += 1
@@ -254,6 +256,7 @@ class StateManager:
         self.asmptLine = self.line.copy()
         self.alReject = False
         self.sawFlopHeadsUp = False
+        self.limpedPot = False
         self.effStack = None
         self.resetPlayerHistory()
         self.pot = None
@@ -355,8 +358,8 @@ class StateManager:
             elif wager < 1 or pn == self.lastWager['pn'] and wager == self.lastWager['amt']:
                 break
 
-            assert self.lastWager['amt'] is None or wager >= self.lastWager['amt']
-            if wager == self.lastWager['amt']:
+            #assert self.lastWager['amt'] is None or wager >= self.lastWager['amt']
+            if self.lastWager['amt'] and wager <= self.lastWager['amt']:
                 self.addAction(pn, 'C', wager)
             else:
                 code = 'B' if self.lastWager['amt'] is None else 'R'
@@ -475,6 +478,9 @@ class StateManager:
                 for i in range(len(self.asmptLine[key])):
                     action = self.asmptLine[key][i]
                     if action['agg'] in ['B', 'R']:
+                        # zenith returns 100x pot for jam sizes
+                        if action['pctPot'] == 100:
+                            continue
                         totError += (self.line[key][i]['wager'] - action['wager']) ** 2
                         totAgg += 1
             else:
@@ -483,15 +489,17 @@ class StateManager:
                     break
                 for i in range(len(actions)):
                     if actions[i][0] in ['B', 'R']:
+                        if actions[i] == 'RAI':
+                            continue
                         wager = float(actions[i][1:])
-                        totError += (self.line[key][i]['wager'] - wager)
+                        totError += (self.line[key][i]['wager'] - wager) ** 2
                         totAgg += 1
 
         if totAgg == 0:
             return True
 
         mse = totError / totAgg
-        print('MSE:', mse)
+        print('MSE:', round(mse, 2))
         return mse < MSE_THRESH
 
 
@@ -596,7 +604,8 @@ class StateManager:
                 self.reader.debugState += 1
                 self.reader.debugFileName = 0
 
-            print('Ran update in {} seconds'.format(time.time() - start))
+            elapsed = round(time.time() - start, 4)
+            print('Ran update in {} seconds'.format(elapsed))
             if self.pnActive != 0:
                 self.printState()
             time.sleep(self.interval)
@@ -608,7 +617,6 @@ class StateManager:
         files = [name for name in os.listdir(path) if os.path.isfile(path + '/' + name)]
         nums = sorted([int(file.split('.')[0]) for file in files])
         minFileNum = nums[0]
-        #minFileNum = int(files[0].split('.')[0])
         self.reader.debugState = minFileNum
         print('\nPress F9 to step through the debug states\n')
         for i in range(minFileNum, minFileNum + len(files)):
@@ -618,7 +626,8 @@ class StateManager:
             self.updateState()
             self.reader.debugState += 1
             self.reader.debugFileName = 0
-            print('Ran update in {} seconds'.format(time.time() - start))
+            elapsed = round(time.time() - start, 4)
+            print('Ran update in {} seconds'.format(elapsed))
             self.printState()
 
 

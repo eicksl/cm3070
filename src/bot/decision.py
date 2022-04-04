@@ -183,7 +183,6 @@ class Decision:
         Returns True if the hand makes for a suitable call, and False otherwise.
         """        
         z = m['postAgg'] + m['numOppCall'] * 1 / m['potOdds']
-        print('z', z)
         ehs = m['ehsCall'] ** z
         print('canCall EHS:', ehs)
         if ehs >= 0.6:
@@ -198,9 +197,10 @@ class Decision:
             if ehs > k:
                 return True
         
-        ev = m['nhp'] * m['rakedPot'] - (1 - m['nhp']) * m['callAmt']
-        if ev > 0:
-            return True
+        if state.street != 'river':
+            ev = m['nhp'] * m['rakedPot'] - (1 - m['nhp']) * m['callAmt']
+            if ev > 0:
+                return True
 
         return False
 
@@ -522,7 +522,7 @@ class Decision:
 if __name__ == '__main__':
     holeCards = ['Jd', 'Js']
     boardCards = ['8c', '6s', '2s']
-    numOpponents = 2
+    numOpponents = 1
 
     print('holeCards: ' + str(holeCards))
     print('boardCards: ' + str(boardCards))

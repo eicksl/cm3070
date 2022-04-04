@@ -20,12 +20,14 @@ sheet_not_found.png
 /img/test/*
 /img/states/*
 /img/debug/*
+/img/saved/*
 /test/cookies/*
 /config/wizard-tokens.json
 /config/zenith-tokens.json
 /config/zenith-cookies.txt
 /config/zenith-login-cookies.txt
 /data/*
+/hands/*
 *.csv
 
 # Byte-compiled / optimized / DLL files

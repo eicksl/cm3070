@@ -324,3 +324,79 @@ BUr080%2FSBr075
 ["BBf", "BBc", "BBmin", "BBr050", "BBr060", "BBr075", "BBr100", "BBr125", "BBj"]
 BUr120
 ["SBf", "SBc", "SBr075", "SBr100", "SBr125", "SBr150", "SBr175", "SBr200", "SBj"]
+SBc
+["BBc", "BBr050", "BBr075", "BBr100", "BBr125", "BBr150", "BBr175", "BBr200"]
+COr060%2FBUr080%2FSBf%2FBBf%2FCOr075%2F
+["BUf", "BUc", "BUmin", "BUr050", "BUj"]
+COr060%2FBUr080%2FSBf%2FBBf%2FCOr075%2FBUj
+["COf", "COc"]
+LJr060%2FHJf%2FCOf%2FBUf%2FSBc
+["BBf", "BBc", "BBr100", "BBr125", "BBr150", "BBr175", "BBr200", "BBr225", "BBr250"]
+LJr040%2FHJf%2FCOf%2FBUf
+["SBf", "SBc", "SBr100", "SBr125", "SBr150", "SBr175", "SBr200", "SBr225", "SBr250"]
+HJr060%2FCOc%2FBUf
+["SBf", "SBc", "SBr100", "SBr125", "SBr150", "SBr175", "SBr200", "SBr225", "SBr250", "SBj"]
+LJr060%2FHJf%2FCOc
+["BUf", "BUc", "BUr050", "BUr060", "BUr070", "BUr080", "BUr090", "BUr100", "BUr110", "BUr120", "BUr130"]
+HJr080%2FCOf%2FBUf%2FSBc
+["BBf", "BBc", "BBr100", "BBr150", "BBr200", "BBr250", "BBr300", "BBj"]
+SBr100%2FBBr100
+["SBf", "SBc", "SBr040", "SBr050", "SBr060", "SBr070", "SBr080", "SBr090", "SBr100", "SBr110", "SBr120", "SBr130", "SBr140", "SBr150", "SBj"]
+COr080%2FBUf%2FSBc
+["BBf", "BBc", "BBr075", "BBr100", "BBr125", "BBr150", "BBr175", "BBr200", "BBj"]
+HJr060%2FCOf%2FBUc
+["SBf", "SBc", "SBr100", "SBr125", "SBr150", "SBr175", "SBr200", "SBr225", "SBr250", "SBj"]
+LJr080%2FHJf%2FCOf%2FBUf%2FSBc
+["BBf", "BBc", "BBr100", "BBr150", "BBr200", "BBr250", "BBj"]
+COr080%2FBUc%2FSBf
+["BBf", "BBc", "BBr075", "BBr100", "BBr125", "BBr150", "BBr175", "BBr200", "BBj"]
+HJr040%2F
+["COf", "COc", "COr060", "COr070", "COr080", "COr090", "COr100", "COr110"]
+HJr040%2FCOr060%2FBUf%2FSBf
+["BBf", "BBr050", "BBr060", "BBr075", "BBr100", "BBr125", "BBj"]
+HJc%2FCOf%2FBUf%2FSBc
+["BBc", "BBr100", "BBr200", "BBr300", "BBr400", "BBr500", "BBr600"]
+LJr060%2FHJf%2FCOf%2FBUf%2FSBf
+["BBf", "BBc", "BBr100", "BBr125", "BBr150", "BBr175", "BBr200", "BBr225", "BBr250"]
+LJr060%2FHJf%2FCOf%2FBUf%2FSBf
+["BBf", "BBc", "BBr100", "BBr125", "BBr150", "BBr175", "BBr200", "BBr225", "BBr250"]
+LJr040%2FHJc%2FCOf%2FBUf
+["SBf", "SBc", "SBr100", "SBr125", "SBr150", "SBr175", "SBr200", "SBr225", "SBr250"]
+COr080%2FBUf%2FSBf%2F
+["BBf", "BBc", "BBr075", "BBr100", "BBr125", "BBr150", "BBr175", "BBr200", "BBr225", "BBr250", "BBj"]
+COr080%2FBUf%2FSBf%2FBBr175%2F
+["COf", "COc", "COmin", "COr050", "COr060", "COr075", "COr100", "COj"]
+COr080%2FBUf%2FSBf%2FBBr175%2FCOj
+["BBf", "BBc"]
+BUr060%2FSBf%2FBBr100
+["BUf", "BUc", "BUmin", "BUr050", "BUr060", "BUr075", "BUr100", "BUr125", "BUj"]
+LJr060%2FHJf%2FCOf%2FBUf%2FSBf%2FBBr100
+["LJf", "LJc", "LJr050", "LJr060", "LJr075", "LJj"]
+COc%2FBUf
+["SBf", "SBc", "SBr150", "SBr200", "SBr250", "SBr300", "SBr350", "SBr400"]
+LJr060%2FHJf%2FCOr100%2FBUf%2FSBf%2FBBf
+["LJf", "LJc", "LJr050", "LJr060", "LJr075", "LJr100", "LJr125", "LJr150", "LJj"]
+HJr080%2FCOc%2FBUf%2FSBf
+["BBf", "BBc", "BBr100", "BBr150", "BBr200", "BBr250", "BBj"]
+LJr060%2FHJc%2FCOf%2FBUf%2FSBf
+["BBf", "BBc", "BBr100", "BBr125", "BBr150", "BBr175", "BBr200", "BBr225", "BBr250"]
+HJr060%2FCOr080%2FBUf%2FSBf%2FBBf
+["HJf", "HJc", "HJmin", "HJr050", "HJr060", "HJr075", "HJr100", "HJr125", "HJj"]
+COr080%2F
+["BUf", "BUc", "BUr040", "BUr050", "BUr060", "BUr070", "BUr080", "BUr090", "BUr100", "BUr110"]
+LJr060%2FHJf%2FCOf%2FBUf%2FSBr125%2FBBf
+["LJf", "LJc", "LJr050", "LJr060", "LJr075", "LJr100", "LJr125", "LJj"]
+BUr060%2FSBf%2FBBr200%2F
+["BUf", "BUc", "BUmin", "BUr050", "BUr060", "BUr075", "BUj"]
+BUr060%2FSBf%2FBBr200%2FBUr050
+["BBf", "BBc", "BBj"]
+SBr100%2FBBr110%2F
+["SBf", "SBc", "SBr040", "SBr050", "SBr060", "SBr070", "SBr080", "SBr090", "SBr100", "SBr110", "SBr120", "SBr130", "SBr140", "SBr150", "SBj"]
+SBr100%2FBBr110%2FSBr080
+["BBf", "BBc", "BBr040", "BBr050", "BBr060", "BBj"]
+HJc%2FCOf%2FBUf%2F
+["SBf", "SBc", "SBr100", "SBr200", "SBr300", "SBr400", "SBr500", "SBr600"]
+HJc%2FCOf%2FBUf%2FSBr100
+["BBf", "BBc", "BBr050", "BBr075", "BBr100", "BBr125", "BBr150", "BBj"]
+COr080%2FBUr060%2FSBf
+["BBf", "BBmin", "BBr050", "BBr060", "BBr075", "BBr100", "BBr125", "BBr150", "BBj"]

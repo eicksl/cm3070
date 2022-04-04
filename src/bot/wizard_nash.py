@@ -295,7 +295,7 @@ class WizardNash:
             "&flop_actions={}&turn_actions={}&river_actions={}&board={}&cache_change={}"
             .format(asmptLine['flop'], asmptLine['turn'], asmptLine['river'], board, self.cacheChange)
         )
-        print(url)
+        #print(url)
         data = self.sendRequest(url)
         if data is None:
             return None, None

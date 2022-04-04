@@ -9,11 +9,11 @@ class Actor:
 
     @staticmethod
     def perform(state, action: tuple) -> None:
-        if state.street == 'pre' and state.lastWager['pn'] == 0:
+        if state.street == 'pre' and state.lastWager['pn'] == 0 and action[0] == 'c':
             agg = 'X'
         else:
             agg = action[0].upper()
-        if state.street == 'pre' and agg == 'R' and state.numAggCS == 0:
+        if state.street == 'pre' and agg == 'R' and state.numAggCS == 0 and not state.limpedPot:
             if state.pn_to_pos[0] == 'SB':
                 time.sleep(mapRange(random(), 0, 1, 0.5, 1.5))
                 Actor.send('f10')
@@ -32,7 +32,7 @@ class Actor:
                     #time.sleep(mapRange(random(), 0, 1, 2, 5))
                     Actor.send('right')
                 case 'C':
-                    #time.sleep(mapRange(random(), 0, 1, 3, 7))
+                    time.sleep(mapRange(random(), 0, 1, 0.5, 2))
                     Actor.send('tab')
                 case 'J':
                     #time.sleep(mapRange(random(), 0, 1, 4, 8))
@@ -44,10 +44,10 @@ class Actor:
                     pct = action[2]
                     code = round(pct * 100 / 5) * 50
                     if code > 2050:
-                        key = 'plus'
+                        key = 'plus' if state.numAggCS > 0 else ';'
                     else:
                         key = HOTKEYS[code]
-                    #time.sleep(mapRange(random(), 0, 1, 3, 7))
+                    time.sleep(mapRange(random(), 0, 1, 1, 3.5))
                     Actor.send(key)
                     time.sleep(mapRange(random(), 0, 1, 0.5, 1.8))
                     Actor.send('up')
@@ -55,6 +55,7 @@ class Actor:
 
     @staticmethod
     def fastFold() -> None:
+        time.sleep(random())
         Actor.send('down')
 
 

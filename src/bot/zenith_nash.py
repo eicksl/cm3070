@@ -211,7 +211,8 @@ class ZenithNash:
         if pct > sizes[-1] + self.thresh:
             # TODO: may want to use the exact jam pct of pot instead of 100x the pot
             return (100, 'j') if hasJam else (None, None)
-        
+
+        # TODO: use wagers instead of pct pot sizes (more accurate)
         nearest = min(sizes, key=lambda x: abs(x - pct))
         strNearest = str(nearest)
         if hasMin and nearest == sizes[0]:
